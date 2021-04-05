@@ -1,4 +1,4 @@
-+module HANK_MNS
+module HANK_MNS
 export hello, domath, domath2
 
 """

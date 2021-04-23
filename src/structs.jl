@@ -123,3 +123,27 @@ function set_parameters( ; β::Float64 = 0.986,    #discount factor
 
 end
 
+
+"""
+    reshape_c(c::Array{Float64},p)
+
+helper function with two methods to replace par2wide and par2long from the MNS code
+"""
+function reshape_c(c::Array{Float64,1},p::params=p)
+ @unpack nb,nz = p
+
+ c_wide = reshape(c,(nb,nz))
+
+ return c_wide
+
+end
+
+
+function reshape_c(c::Array{Float64,2},p::params=p)
+ @unpack nb,nz = p
+
+ c_long = reshape(c,(nb*nz,1))
+
+ return c_long[:,1]
+
+end

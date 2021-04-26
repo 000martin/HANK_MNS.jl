@@ -1,6 +1,6 @@
 #File that provides structures used throughout the code as well as functions to fill them
 
-using Parameters, Roots, QuantEcon
+using Parameters, Roots, QuantEcon, Statistics
 
 """
 A structure that stores the parameter vector of the model

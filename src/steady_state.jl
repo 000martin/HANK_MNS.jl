@@ -28,20 +28,28 @@ end
 
 Computes household steady state (SS) savings and labor supply using the endogenous grid method (EGM).
 """
-function  EGM_SS(c_guess::Array{Float64},β::Float64,Y::Float64,p::params;
+function  EGM_SS(c_guess::Array{Float64,2},β::Float64,Y::Float64,p::params;
                  T::Int=30, maxit::Int = 500, tol::Float64 = 1e-7)
+
+   @unpack μ,Rbar,B,Γ,tax_weights = p
+
+   #steady state prices:
+   R = Rbar; w = 1/μ; τ = B*Y*(1-1/R)*(Γ'*tax_weights); D = Y*(1-w)
     
     iter = 0; dist = 1 #initialize iteration
     while (iter < maxit) & (dist > tol)  
 
-    c_policies = 0 #solveback here
-    
-    dist = maximum(abs.(c_policies[:,1].-c_policies[:,2]))
+    c_policies = solveback(reshape_c(c_guess),w*ones(T),R*ones(T),τ*ones(T),
+    D*ones(T),β)
 
-    c_guess = c_policies[:,1] #update policy rules
+    dist = maximum(abs.(c_policies[:,1].-c_policies[:,2])) #measure maximum distance
+
+    c_guess = reshape_c(c_policies[:,1]) #update policy rules
+
+    iter = iter + 1 #count iterations
     end
  
-    return c_policies[:,1] #return steady state policy functions
+   return c_guess #return steady state policy functions
 
 end
 
@@ -55,8 +63,10 @@ end
  In w_path etc, the final values must correspond to the period to solve back from
 """
 
-function solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},τ_path::Array{Float64},
-                    div_path::Array{Float64,1},β::Float64,p::params) 
+function solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},τ_path::Array{Float64},
+                    div_path::Array{Float64,1},β::Float64,p::params=p) 
+
+
 
   #calculate total amount of periods
   T = size(w_path)[1]
@@ -64,16 +74,19 @@ function solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},τ_path::A
   #pre-allocate some arrays for consumption paths
   c_path = zeros(size(repeat(c_final,1,T)))
   #set final values
-  c_path[:,end] = c_final 
+  c_path[:,end] .= c_final 
 
   #solving back
   for t = T-1:-1:1
 
-    c_path[:,t] = 0 # here EGM function
+  temp =  EGM(reshape_c(c_path[:,t+1]),β, R_path[t:t+1], w_path[t:t+1],
+               τ_path[t:t+1], div_path[t:t+1])
+
+   c_path[:,t] .= reshape_c(temp)
 
   end
     
-
+  return c_path
     
 end
 
@@ -106,13 +119,13 @@ w::Float64,τ::Float64,div::Float64,inc_idx::Int,p::params=p)
 
  @unpack b_grid,ψ,z,tax_weights = p
 
- itp = LinearInterpolation(b_grid,cons[:,inc_idx]) #create interpolant
+ itp = LinearInterpolation(b_grid,cons[:,inc_idx],extrapolation_bc = Line()) #create interpolant
 
  c = itp.(xthis) #interpolate
 
 
  n = (margU.(c).*w.*z[inc_idx]).^(1/ψ)
- bp = R*(xthis.+wage.*n.*z[inc_idx] .- τ*tax_weights[inc_index].+ div .- c )
+ bp = R*(xthis.+w.*n.*z[inc_idx] .- τ*tax_weights[inc_idx].+ div .- c )
 
  return c,n,bp
 end
@@ -124,9 +137,9 @@ Conducts one iteration on consumption and labor supply using the endogenous grid
 Inputs need to be 2x1 arrays of wage, interest etc in current and previous period
 """ 
 function EGM(c_next::Array{Float64,2},β::Float64, Rs::Array{Float64,1}, ws::Array{Float64,1},
-                τs::Array{Float64,1}, div::Array{Float64,1},p::params)
+                τs::Array{Float64,1}, div::Array{Float64,1},p::params=p)
 
- @unpack nb, nz, b_grid, γ, z = p 
+ @unpack nb, nz, b_grid, γ, z, Πz, ψ, tax_weights = p 
 
  #asset grid to use
  xthis = vcat(0.0,b_grid)
@@ -139,33 +152,33 @@ function EGM(c_next::Array{Float64,2},β::Float64, Rs::Array{Float64,1}, ws::Arr
  #calculate marginal utilities
  for i = 1:nz
 
-    cthis, = get_cnbp(xthis, c_next,R[2],w[2],τs[2],div[2],i)
+    cthis, = get_cnbp(xthis, c_next,Rs[2],ws[2],τs[2],div[2],i)
 
-    @assert (sum(cthis .> 0.0) .== nz) #check whether all consumption values are positve
+    @assert (sum(cthis .> 0.0) .== nx) #check whether all consumption values are positve
 
-    MU[:,i] = margU.(cthis)
+    MU[:,i] .= margU.(cthis)
  end
  
  #compute expected marginal utilities for the different income types
  MUexp = Array{Float64,2}(undef,nx,nz)  #pre-allocate
  for i = 1:nz
- MUexp[:,i] = MU[:,i].*Πz[i,:]
+ MUexp[:,i] .= sum(MU.*Πz[i,:]',dims=2)[:,1]
  end
 
- Cprev = (β*Rs[1]*margU.(MUexp)).^(-(1/γ))
+ Cprev = (β*Rs[1]*MUexp).^(-(1/γ))
 
  @assert all(x -> x>0, Cprev) #check whether all consumption values are positve
 
  labor = (margU.(Cprev).*ws[1].*z').^(1/ψ)
 
- bprev = xthis./Rs[1] .+ Cprev .- ws[1].*labor.*z' + τs[1]*tax_weights' - div[1]
-
+ bprev = xthis./Rs[1] .+ Cprev .- ws[1].*labor.*z' .+ τs[1].*tax_weights' .- div[1]
+ 
  #generate c_new
- Cnew = Array{Float64,2}(undef,nx,nz)
-
+ Cnew = Array{Float64,2}(undef,nb,nz)
+ 
  for i = 1:nz
     ind_constrained = (b_grid .<= bprev[1,i])
-
+    
     if any(ind_constrained)
         Cnew[ind_constrained,i].= egm_solve_constrained(b_grid[ind_constrained],i,ws[1],τs[1],div[1],Rs[1])
     end
@@ -187,19 +200,19 @@ function egm_solve_constrained(bs::Array{Float64,1},ip::Int,w::Float64,τ::Float
 
  #initial guess for labor supply
  n = 0.6.*ones(size(bs))
- c = b .+ n.*w*p.z[ip] .+ div .+ (1-1/R)*p.a_min
+ c = bs .+ n.*w*p.z[ip] .+ div .+ (1-1/R)*p.a_min
 
  iter = 0; dist = 1.0
  while (iter < 1000) & (dist > 1e-7)  
 
     f = margU.(c).*w.*p.z[ip] .- n.^p.ψ
-    J = margU(c,2).*(w*p.z[ip])^2 .- p.ψ*n.^(p.ψ-1.0)
+    J = margU.(c,2).*(w*p.z[ip])^2 .- p.ψ*n.^(p.ψ-1.0)
     
     #update 
     n = n .- f./J
-    c = b .+ n.*w*p.z[ip] .+ div .+ (1-1/R)*p.a_min
+    c = bs .+ n.*w*p.z[ip] .+ div .+ (1-1/R)*p.a_min
 
-    dist = abs(f)
+    dist = maximum(abs.(f))
     iter = iter+1
  end
 
@@ -207,5 +220,9 @@ function egm_solve_constrained(bs::Array{Float64,1},ip::Int,w::Float64,τ::Float
  if iter == 1000
     error("egm_solve_constrained did not converge")
  end
+
+ c_cons = c
+
+ return c_cons 
 
 end

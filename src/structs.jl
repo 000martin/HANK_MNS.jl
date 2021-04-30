@@ -30,6 +30,8 @@ end
 
 
 """
+    logspaceshift(xa::Float64,xb::Float64,n::Int,x2::Float64,n_at_x2::Float64)
+
 A function involved in making the grids. Several methods available.
 """
 

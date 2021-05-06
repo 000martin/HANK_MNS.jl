@@ -11,14 +11,28 @@ implied by labor and output implied by consumption as well as the distance betwe
 asset choices and the asset target. It can be used in an Root-Finding algorithm to find the β
 corresponding to the asset and interest rate target.
 """
-function check_steady_state(β::Float64,Y::Float64,p::params)
+function check_steady_state(beta::Float64,Y::Float64,p::params)
 
-    @unpack μ,Rbar,B,Γ,tax_weights = p
+    @unpack μ,Rbar,B,Γ,tax_weights,b_grid,k_grid = p
+
+    β = beta/100.0
 
     #steady state prices:
-    R = Rbar; w = 1/μ; τ = B*Y*(1-1/R)*(Γ'*tax_weights); D = Y*(1-w)
+    R = Rbar; w = 1/μ; τ = B*Y*(1-1/R)*(Γ'*tax_weights); div = Y*(1-w)
 
-    #not complete yet
+    #initial guess for consumption policy 
+    c_guess = 0.3 .+ 0.1*p.b_grid; c_guess = repeat(c_guess,1,3)
+
+    c_policies = EGM_SS(c_guess, β, Y, p)
+
+    Pi = forwardmat(c_policies,R,w,τ,div)
+
+    D = inv_dist(Pi)
+
+    agg_assets = dot(D,repeat(k_grid,3,1))
+
+
+    return agg_assets
 
 end
 
@@ -48,6 +62,8 @@ function  EGM_SS(c_guess::Array{Float64,2},β::Float64,Y::Float64,p::params;
 
     iter = iter + 1 #count iterations
     end
+    println("Steady State Analytics")
+    println("No. of iterations: ",iter,"  Distance: ",dist)
  
    return c_guess #return steady state policy functions
 
@@ -200,7 +216,7 @@ function egm_solve_constrained(bs::Array{Float64,1},ip::Int,w::Float64,τ::Float
 
  #initial guess for labor supply
  n = 0.6.*ones(size(bs))
- c = bs .+ n.*w*p.z[ip] .+ div .+ (1-1/R)*p.a_min
+ c = bs .+ n.*w*p.z[ip] .+ div .+ (1-1/R)*p.a_min .- τ*p.tax_weights[ip]
 
  iter = 0; dist = 1.0
  while (iter < 1000) & (dist > 1e-7)  
@@ -210,7 +226,7 @@ function egm_solve_constrained(bs::Array{Float64,1},ip::Int,w::Float64,τ::Float
     
     #update 
     n = n .- f./J
-    c = bs .+ n.*w*p.z[ip] .+ div .+ (1-1/R)*p.a_min
+    c = bs .+ n.*w*p.z[ip] .+ div .+ (1-1/R)*p.a_min .- τ*p.tax_weights[ip]
 
     dist = maximum(abs.(f))
     iter = iter+1
@@ -328,5 +344,18 @@ function find_closest_lower(x::Float64,grid::Array{Float64,1}=k_grid)
    else
       return closest_index - 1
    end
+end
+
+"""
+   inv_dist
+
+Find invariant distribution by iterating over transition matrix
+uses insights from https://discourse.julialang.org/t/stationary-distribution-with-sparse-transition-matrix/40301
+"""
+function inv_dist(Π::SparseMatrixCSC)
+
+   x = [1; (I - Π'[2:end,2:end]) \ Vector(Π'[2:end,1])]
+   return dist = x./sum(x) 
+
 end
 

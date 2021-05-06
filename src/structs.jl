@@ -1,8 +1,7 @@
-module HANK_MNS
+
 
 using Parameters, Roots, QuantEcon, Statistics
 
-export logspaceshift, makeknotd, set_parameters, reshape_c
 
 #File that provides structures used throughout the code as well as functions to fill them
 
@@ -96,7 +95,7 @@ Function to construct the parameter structure.
 function set_parameters( ; β::Float64 = 0.986,    #discount factor
                            γ::Float64 = 2.0,       #Risk aversion
                            ψ::Float64 = 2.0,      #inverse Frisch elasticity
-                           B::Float64 = 1.4,      #Supply of Assets: B times annual GDP
+                           B::Float64 = 5.5,      #Supply of Assets: 1.4 times annual GDP = 5.6 times quarterly GDP
                            μ::Float64 = 1.2,      #Markup
                            θ::Float64 = 0.15,     #Probability that Calvo fairy visits
                            Rbar::Float64 = 1.005, #Target quarterly interest rate
@@ -125,7 +124,7 @@ function set_parameters( ; β::Float64 = 0.986,    #discount factor
 
  b_grid = logspaceshift(x_min,a_max,nb,logshift)
 
- return params(β,γ,ψ,B,μ,θ,Rbar,nz,z,Πz,Γ,tax_weights,a_min,a_max,nk,nb,k_grid,b_grid)
+ return params(β,γ,ψ,B,μ,θ,Rbar,nz,z,Πz,Γ,tax_weights.*z,a_min,a_max,nk,nb,k_grid,b_grid)
 
 end
 
@@ -154,4 +153,3 @@ function reshape_c(c::Array{Float64,2},p::params=p)
 
 end
 
-end

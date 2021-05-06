@@ -9,7 +9,7 @@ In this replication study, we do ...
 
 
 ```@autodocs
-Modules = [HANK_MNS.jl]
+Modules = [HANK_MNS]
 ```
 
 

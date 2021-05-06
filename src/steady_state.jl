@@ -1,6 +1,6 @@
 #features functions to calibrate and compute the steady state
 
-using Interpolations
+using Interpolations, SparseArrays, LinearAlgebra
 
 """
     check_steady_state(β::Float64,Y::Float64,p::params)
@@ -226,3 +226,107 @@ function egm_solve_constrained(bs::Array{Float64,1},ip::Int,w::Float64,τ::Float
  return c_cons 
 
 end
+
+
+"""
+   forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64)
+
+Generates a transition matrix for the aggregate wealth distribution. Uses the function lineartrans() as 
+in the original code.
+"""
+
+function forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64, par::params=p)
+
+   @unpack nk,nz,k_grid,Πz = par
+
+
+   #pre-allocate some Arrays:
+   IR = Array{Int64,1}(undef,2*nk*nz^2); IC = Array{Int64,1}(undef,2*nk*nz^2)
+   VV =  Array{Float64,1}(undef,2*nk*nz^2)
+   
+   idx1 = 1 #variable used for indexing below
+   for i = 1:nz
+   
+    bp = get_cnbp(k_grid,c_opt,R,w,τ,div,i)[3] #saving choices for income type
+
+    From, To, Probs = lineartrans(bp) #get transitions
+
+    #aux. variables used for indexing below
+    offsi = (i-1)*nk 
+
+      for j = 1:nz
+
+         ppj = Πz[i,j]
+
+         #aux. variable used for indexing below
+         offsj = (j-1)*nk; idx2 = idx1 + 2*nk - 1
+         
+         #this will generate the row indices of the sparse transition matrix
+         #this indicates the position the agents come from
+         IR[idx1:idx2] = offsi .+ From 
+         #this will generate the column indices of the sparse transition matrix
+         #this where they go to
+         IC[idx1:idx2] = offsj .+ To
+         #this will be the entries of the sparse transition matrix
+         #and this the probabilities where they will go to
+         VV[idx1:idx2] = ppj*Probs
+
+             
+         idx1 = idx1 + 2*nk #update index variable
+      end
+   
+
+   end
+
+ return Pi = sparse(IR,IC,VV) #return transition matrix
+end
+
+
+
+"""
+   lineartrans(bp::Array{Float64,1},par::params=p)
+
+Calculates the new positions and transition probabilities on the asset grid for given savings choices.
+Used the to conduct a non-stochastic simulation a la Young (2010, JEDC).
+"""
+function lineartrans(bp::Array{Float64,1},par::params=p)
+ @unpack nk, k_grid = par
+ 
+ #remove values higher than maximum on asset grid
+ k0 = minimum(hcat(bp,maximum(k_grid)*ones(size(bp))),dims = 2)[:]
+
+ #make sure all values are above 0
+ k0 = maximum(hcat(k0,zeros(size(k0))),dims = 2)[:]
+
+ #find next closest value on grid that is lower for each element of k0
+ iPos = find_closest_lower.(k0,(k_grid,))
+ #make sure no value in iPos exceed nk - 1
+ iPos = minimum(hcat(iPos,(nk-1)*repeat([1],nk)),dims = 2)[:] 
+ 
+ 
+ pHigh = (k0 .- k_grid[iPos])./(k_grid[iPos.+1]-k_grid[iPos])
+
+ From = repeat(collect(1:nk),2,1)
+ To   = vcat(iPos,iPos .+ 1)
+ Probs= vcat(1 .- pHigh,pHigh)
+
+ return From, To, Probs
+
+end
+
+
+"""
+   find_closest_lower(x::Float64,grid::Array{Float64,1})
+
+Helper function for lineartrans
+"""
+function find_closest_lower(x::Float64,grid::Array{Float64,1}=k_grid)
+
+   closest_index = argmin(abs.(x.-grid))
+   if grid[closest_index] <= x
+      return closest_index
+   else
+      return closest_index - 1
+   end
+end
+

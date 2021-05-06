@@ -1,6 +1,10 @@
-#File that provides structures used throughout the code as well as functions to fill them
+module HANK_MNS
 
 using Parameters, Roots, QuantEcon, Statistics
+
+export logspaceshift, makeknotd, set_parameters, reshape_c
+
+#File that provides structures used throughout the code as well as functions to fill them
 
 """
 A structure that stores the parameter vector of the model
@@ -147,5 +151,7 @@ function reshape_c(c::Array{Float64,2},p::params=p)
  c_long = reshape(c,(nb*nz,1))
 
  return c_long[:,1]
+
+end
 
 end

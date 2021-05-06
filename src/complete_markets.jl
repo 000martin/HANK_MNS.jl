@@ -1,6 +1,20 @@
 # Complete markets transition path
 
 
+function rep_agent()
+    p = set_parameters()
+
+    # Add twofold definition of ψ to params struct
+    p.ψ1 = 1
+    p.ψ2 = 2
+
+    # Update field values for representative agent case
+    p.ψ1 = p.ψ1 * dot(invdistr(p.Πz'), p.z.^(1+1/p.ψ2)) 
+    p.β = 1/p.Rbar
+    
+end
+
+
 # Solve for steady state
 A = 1
 ppi = 1
@@ -21,7 +35,7 @@ name = ["R","A", "S", "wage","dividend","ppi","Y","C","N","L","pbarB","pbarA","p
 nvar = length(name)
 stst = zeros(nvar,1)
 
-for i_ = 1:nvar
+for i_ in eachindex(nvar)
     eval(['stst(i_) = ' names{i_} ''])
     eval(['ind_' names{i_} ' = i_'])
 end
@@ -31,9 +45,19 @@ end
 function invdistr(Pi)
     @assert abs.(sum.(Pi)-1)<1e-10
     opts.disp = 0
-    eigvals
+    x, eval = eigvals(Pi,[],1,1+1e-10,opts)
 
-    return
+        [x,eval] = eigs(Pi,[],1,1+1e-10,opts);
+    @assert abs.(eval-1)<1e-10)
+    
+    D = x/sum(x)
+
+    @assert min(D)>-1e-12)
+    
+    D = max(D,0)
+    D = D/sum(D)
+
+    return D
 end
 
 

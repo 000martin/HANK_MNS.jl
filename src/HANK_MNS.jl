@@ -1,4 +1,5 @@
 module HANK_MNS
+using Parameters, Roots, QuantEcon, Statistics
 export logspaceshift, makeknotd, set_parameters, reshape_c
 
 """
@@ -150,4 +151,3 @@ function reshape_c(c::Array{Float64,2},p::params=p)
 end
 
 end
-

@@ -22,13 +22,17 @@ function check_steady_state(beta::Float64,Y::Float64,p::params)
 
     #initial guess for consumption policy 
     c_guess = 0.3 .+ 0.1*p.b_grid; c_guess = repeat(c_guess,1,3)
-
+    
+    #find HH policy function
     c_policies = EGM_SS(c_guess, β, Y, p)
+   
+    #get wealth-income transition matrix
+    Pi = forwardmat(c_policies,R,w,τ,div,p)
 
-    Pi = forwardmat(c_policies,R,w,τ,div)
-
+    #get Steady State wealth distribution
     D = inv_dist(Pi)
-
+    
+    #compute aggregate assets
     agg_assets = dot(D,repeat(k_grid,3,1))
 
 
@@ -53,12 +57,12 @@ function  EGM_SS(c_guess::Array{Float64,2},β::Float64,Y::Float64,p::params;
     iter = 0; dist = 1 #initialize iteration
     while (iter < maxit) & (dist > tol)  
 
-    c_policies = solveback(reshape_c(c_guess),w*ones(T),R*ones(T),τ*ones(T),
-    D*ones(T),β)
+    c_policies = solveback(reshape_c(c_guess,p),w*ones(T),R*ones(T),τ*ones(T),
+    D*ones(T),β,p)
 
     dist = maximum(abs.(c_policies[:,1].-c_policies[:,2])) #measure maximum distance
 
-    c_guess = reshape_c(c_policies[:,1]) #update policy rules
+    c_guess = reshape_c(c_policies[:,1],p) #update policy rules
 
     iter = iter + 1 #count iterations
     end
@@ -80,7 +84,7 @@ end
 """
 
 function solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},τ_path::Array{Float64},
-                    div_path::Array{Float64,1},β::Float64,p::params=p) 
+                    div_path::Array{Float64,1},β::Float64,p::params) 
 
 
 
@@ -95,10 +99,10 @@ function solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Ar
   #solving back
   for t = T-1:-1:1
 
-  temp =  EGM(reshape_c(c_path[:,t+1]),β, R_path[t:t+1], w_path[t:t+1],
-               τ_path[t:t+1], div_path[t:t+1])
+  temp =  EGM(reshape_c(c_path[:,t+1],p),β, R_path[t:t+1], w_path[t:t+1],
+               τ_path[t:t+1], div_path[t:t+1],p)
 
-   c_path[:,t] .= reshape_c(temp)
+   c_path[:,t] .= reshape_c(temp,p)
 
   end
     
@@ -108,11 +112,11 @@ end
 
 
 """
-    margU(c::Float64,par::params=p)
+    margU(c::Float64,par::params)
 
  Helper function, computes marginal utility of consumption or second derivative of utility function (if order = 2)
 """
-function margU(c::Float64,order::Int=1,par::params=p)
+function margU(c::Float64,par::params,order::Int=1)
  if order == 1
     return mu = c^(-par.γ)
  elseif order == 2
@@ -131,7 +135,7 @@ Helper function to retrieve some values
 
 """
 function get_cnbp(xthis::Array{Float64},cons::Array{Float64,2},R::Float64,
-w::Float64,τ::Float64,div::Float64,inc_idx::Int,p::params=p)
+w::Float64,τ::Float64,div::Float64,inc_idx::Int,p::params)
 
  @unpack b_grid,ψ,z,tax_weights = p
 
@@ -140,7 +144,7 @@ w::Float64,τ::Float64,div::Float64,inc_idx::Int,p::params=p)
  c = itp.(xthis) #interpolate
 
 
- n = (margU.(c).*w.*z[inc_idx]).^(1/ψ)
+ n = (margU.(c,(p,)).*w.*z[inc_idx]).^(1/ψ)
  bp = R*(xthis.+w.*n.*z[inc_idx] .- τ*tax_weights[inc_idx].+ div .- c )
 
  return c,n,bp
@@ -153,7 +157,7 @@ Conducts one iteration on consumption and labor supply using the endogenous grid
 Inputs need to be 2x1 arrays of wage, interest etc in current and previous period
 """ 
 function EGM(c_next::Array{Float64,2},β::Float64, Rs::Array{Float64,1}, ws::Array{Float64,1},
-                τs::Array{Float64,1}, div::Array{Float64,1},p::params=p)
+                τs::Array{Float64,1}, div::Array{Float64,1},p::params)
 
  @unpack nb, nz, b_grid, γ, z, Πz, ψ, tax_weights = p 
 
@@ -168,11 +172,11 @@ function EGM(c_next::Array{Float64,2},β::Float64, Rs::Array{Float64,1}, ws::Arr
  #calculate marginal utilities
  for i = 1:nz
 
-    cthis, = get_cnbp(xthis, c_next,Rs[2],ws[2],τs[2],div[2],i)
+    cthis, = get_cnbp(xthis, c_next,Rs[2],ws[2],τs[2],div[2],i,p)
 
     @assert (sum(cthis .> 0.0) .== nx) #check whether all consumption values are positve
 
-    MU[:,i] .= margU.(cthis)
+    MU[:,i] .= margU.(cthis,(p,))
  end
  
  #compute expected marginal utilities for the different income types
@@ -185,7 +189,7 @@ function EGM(c_next::Array{Float64,2},β::Float64, Rs::Array{Float64,1}, ws::Arr
 
  @assert all(x -> x>0, Cprev) #check whether all consumption values are positve
 
- labor = (margU.(Cprev).*ws[1].*z').^(1/ψ)
+ labor = (margU.(Cprev,(p,)).*ws[1].*z').^(1/ψ)
 
  bprev = xthis./Rs[1] .+ Cprev .- ws[1].*labor.*z' .+ τs[1].*tax_weights' .- div[1]
  
@@ -196,7 +200,7 @@ function EGM(c_next::Array{Float64,2},β::Float64, Rs::Array{Float64,1}, ws::Arr
     ind_constrained = (b_grid .<= bprev[1,i])
     
     if any(ind_constrained)
-        Cnew[ind_constrained,i].= egm_solve_constrained(b_grid[ind_constrained],i,ws[1],τs[1],div[1],Rs[1])
+        Cnew[ind_constrained,i].= egm_solve_constrained(b_grid[ind_constrained],i,ws[1],τs[1],div[1],Rs[1],p)
     end
  itp = LinearInterpolation(bprev[:,i],Cprev[:,i],extrapolation_bc = Line())
 
@@ -212,7 +216,7 @@ end
 
  Backs out consumption level of constrained household.
 """
-function egm_solve_constrained(bs::Array{Float64,1},ip::Int,w::Float64,τ::Float64,div::Float64,R::Float64,p::params=p)
+function egm_solve_constrained(bs::Array{Float64,1},ip::Int,w::Float64,τ::Float64,div::Float64,R::Float64,p::params)
 
  #initial guess for labor supply
  n = 0.6.*ones(size(bs))
@@ -221,8 +225,8 @@ function egm_solve_constrained(bs::Array{Float64,1},ip::Int,w::Float64,τ::Float
  iter = 0; dist = 1.0
  while (iter < 1000) & (dist > 1e-7)  
 
-    f = margU.(c).*w.*p.z[ip] .- n.^p.ψ
-    J = margU.(c,2).*(w*p.z[ip])^2 .- p.ψ*n.^(p.ψ-1.0)
+    f = margU.(c,(p,)).*w.*p.z[ip] .- n.^p.ψ
+    J = margU.(c,(p,),2).*(w*p.z[ip])^2 .- p.ψ*n.^(p.ψ-1.0)
     
     #update 
     n = n .- f./J
@@ -251,7 +255,7 @@ Generates a transition matrix for the aggregate wealth distribution. Uses the fu
 in the original code.
 """
 
-function forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64, par::params=p)
+function forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64, par::params)
 
    @unpack nk,nz,k_grid,Πz = par
 
@@ -263,9 +267,9 @@ function forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,di
    idx1 = 1 #variable used for indexing below
    for i = 1:nz
    
-    bp = get_cnbp(k_grid,c_opt,R,w,τ,div,i)[3] #saving choices for income type
+    bp = get_cnbp(k_grid,c_opt,R,w,τ,div,i,par)[3] #saving choices for income type
 
-    From, To, Probs = lineartrans(bp) #get transitions
+    From, To, Probs = lineartrans(bp,par) #get transitions
 
     #aux. variables used for indexing below
     offsi = (i-1)*nk 
@@ -300,12 +304,12 @@ end
 
 
 """
-   lineartrans(bp::Array{Float64,1},par::params=p)
+   lineartrans(bp::Array{Float64,1},par::params)
 
 Calculates the new positions and transition probabilities on the asset grid for given savings choices.
 Used the to conduct a non-stochastic simulation a la Young (2010, JEDC).
 """
-function lineartrans(bp::Array{Float64,1},par::params=p)
+function lineartrans(bp::Array{Float64,1},par::params)
  @unpack nk, k_grid = par
  
  #remove values higher than maximum on asset grid

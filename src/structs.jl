@@ -134,8 +134,8 @@ end
 
 helper function with two methods to replace par2wide and par2long from the MNS code
 """
-function reshape_c(c::Array{Float64,1},p::params=p)
- @unpack nb,nz = p
+function reshape_c(c::Array{Float64,1},par::params)
+ @unpack nb,nz = par
 
  c_wide = reshape(c,(nb,nz))
 
@@ -144,8 +144,8 @@ function reshape_c(c::Array{Float64,1},p::params=p)
 end
 
 
-function reshape_c(c::Array{Float64,2},p::params=p)
- @unpack nb,nz = p
+function reshape_c(c::Array{Float64,2},par::params)
+ @unpack nb,nz = par
 
  c_long = reshape(c,(nb*nz,1))
 

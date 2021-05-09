@@ -30,6 +30,22 @@ A structure that stores the parameter vector of the model
     b_grid::Array{Float64,1}       #knot points for consumption polynomial
 end
 
+""" 
+A structure that saves the steady state of the model.
+"""
+struct steady_state
+ c_policies::Array{Float64}  #policy functions
+ D::Array{Float64,1}         #invariant distribution over income/wealth types
+ Y::Float64                  #Aggregate output
+ C::Float64                  #Aggregate consumption
+ L::Float64                  #Aggregate labor supply
+ K::Float64                  #aggregate assets 
+ w::Float64                  #wage
+ τ::Float64                  #taxes
+ div::Float64                #dividends
+ R::Float64                  #interest rate
+end
+
 
 
 """

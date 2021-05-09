@@ -1,6 +1,30 @@
 #features functions to calibrate and compute the steady state
 
-using Interpolations, SparseArrays, LinearAlgebra
+using Interpolations, SparseArrays, LinearAlgebra, NLsolve
+
+
+"""
+   get_steady_state(p::params,β_guess::Float64,Y_guess::Float64)
+
+Solve for β and steady state output so target bond level is reached at the target interest rate (both are specified in p)
+DOES NOT WORK YET!
+"""
+function get_steady_state(p::params,β_guess::Float64,Y_guess::Float64)
+
+   #@unpack  = p
+   
+   #define objective for nonlinear solver
+   function obj!(Dist,x)
+      Dist = check_steady_state(x[1],x[2],p;return_distance=true)
+   end
+
+   SR = nlsolve(obj!,[β_guess*100,Y_guess]  ) #get solver results
+
+   #return steady state structure and the β value we solved for 
+   return SR
+
+end
+
 
 """
     check_steady_state(β::Float64,Y::Float64,p::params)
@@ -11,14 +35,14 @@ implied by labor and output implied by consumption as well as the distance betwe
 asset choices and the asset target. It can be used in an Root-Finding algorithm to find the β
 corresponding to the asset and interest rate target.
 """
-function check_steady_state(beta::Float64,Y::Float64,p::params)
+function check_steady_state(beta::Float64,Y::Float64,p::params;return_distance::Bool=false)
 
     @unpack μ,Rbar,B,Γ,tax_weights,b_grid,k_grid = p
 
     β = beta/100.0
-
+    
     #steady state prices:
-    R = Rbar; w = 1/μ; τ = B*Y*(1-1/R)*(Γ'*tax_weights); div = Y*(1-w)
+    R = Rbar; w = 1/μ; τ = B*Y*(1-1/R)/(Γ'*tax_weights); div = Y*(1-w)
 
     #initial guess for consumption policy 
     c_guess = 0.3 .+ 0.1*p.b_grid; c_guess = repeat(c_guess,1,3)
@@ -35,8 +59,22 @@ function check_steady_state(beta::Float64,Y::Float64,p::params)
     #compute aggregate assets
     agg_assets = dot(D,repeat(k_grid,3,1))
 
+    #get aggregate comsumption and labor (L = steady state output)
+    C, L = aggregate_C_L(D,c_policies,R,w,τ,div,p)
 
-    return agg_assets
+    #compute distance vector 
+    SS_dist = Array{Float64,1}(undef,2)
+    SS_dist[1] = agg_assets/C - B 
+    SS_dist[2] = C - L
+   
+    if return_distance == true
+    println("Current C: ",C," Current K: ",agg_assets)
+    println("Current Dist[1]: ",SS_dist[1]," Current Dist[2]: ",SS_dist[2])
+    println(" ")
+    return SS_dist
+    else
+    return SS_structure = steady_state(c_policies,D,Y,C,L,agg_assets,w,τ,div,R)
+    end
 
 end
 
@@ -52,7 +90,7 @@ function  EGM_SS(c_guess::Array{Float64,2},β::Float64,Y::Float64,p::params;
    @unpack μ,Rbar,B,Γ,tax_weights = p
 
    #steady state prices:
-   R = Rbar; w = 1/μ; τ = B*Y*(1-1/R)*(Γ'*tax_weights); D = Y*(1-w)
+   R = Rbar; w = 1/μ; τ = B*Y*(1-1/R)/(Γ'*tax_weights); D = Y*(1-w)
     
     iter = 0; dist = 1 #initialize iteration
     while (iter < maxit) & (dist > tol)  
@@ -298,7 +336,7 @@ function forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,di
 
    end
 
- return Pi = sparse(IR,IC,VV) #return transition matrix
+ return Pi = sparse(IR,IC,VV,nz*nk,nz*nk) #return transition matrix
 end
 
 
@@ -361,5 +399,39 @@ function inv_dist(Π::SparseMatrixCSC)
    x = [1; (I - Π'[2:end,2:end]) \ Vector(Π'[2:end,1])]
    return dist = x./sum(x) 
 
+   #uncomment below for conventional method - takes longer
+   
+   #n = size(Π)[1]
+   #mc = MarkovChain(Array(Π),collect(1:n))
+   #return stationary_distributions(mc)[1]
+
 end
 
+
+"""
+   aggregate_C_L(D::Array{Float64,1},c_policies::Array{Float64,1},R::Float64,w::Float64,τ::Float64,div::Float64)
+
+Computes aggregate consumption and labor supply of the household sector. Equivalent to expect_C in the MNS code.
+"""
+function aggregate_C_L(D::Array{Float64,1},c_policies::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64,p::params)
+  
+   @unpack nz,nk,k_grid,z = p
+
+   #loop over income states
+   L = 0.0; C = 0.0; #initialize
+   for i = 1:nz
+
+      #for simple indexing
+      idx = (i - 1)*nk
+
+      #get consumption and labor supply for income/wealth bin
+      c,n, = get_cnbp(k_grid,c_policies,R,w,τ,div,i,p)
+
+      #sum up (using dot product)
+      C = C + dot(D[idx+1:idx+nk],c)
+      L = L + dot(D[idx+1:idx+nk],n*z[i])
+
+   end
+
+   return C,L
+end

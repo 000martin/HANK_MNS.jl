@@ -1,8 +1,7 @@
-module HANK_MNS
+
 
 using Parameters, Roots, QuantEcon, Statistics
 
-export logspaceshift, makeknotd, set_parameters, reshape_c
 
 #File that provides structures used throughout the code as well as functions to fill them
 
@@ -29,6 +28,22 @@ A structure that stores the parameter vector of the model
     nb::Int               #number of consumption polynomial knot points
     k_grid::Array{Float64,1}       #quadrature grid for wealth distribution
     b_grid::Array{Float64,1}       #knot points for consumption polynomial
+end
+
+""" 
+A structure that saves the steady state of the model.
+"""
+struct steady_state
+ c_policies::Array{Float64}  #policy functions
+ D::Array{Float64,1}         #invariant distribution over income/wealth types
+ Y::Float64                  #Aggregate output
+ C::Float64                  #Aggregate consumption
+ L::Float64                  #Aggregate labor supply
+ K::Float64                  #aggregate assets 
+ w::Float64                  #wage
+ τ::Float64                  #taxes
+ div::Float64                #dividends
+ R::Float64                  #interest rate
 end
 
 
@@ -96,7 +111,7 @@ Function to construct the parameter structure.
 function set_parameters( ; β::Float64 = 0.986,    #discount factor
                            γ::Float64 = 2.0,       #Risk aversion
                            ψ::Float64 = 2.0,      #inverse Frisch elasticity
-                           B::Float64 = 1.4,      #Supply of Assets: B times annual GDP
+                           B::Float64 = 5.5,      #Supply of Assets: 1.4 times annual GDP = 5.6 times quarterly GDP
                            μ::Float64 = 1.2,      #Markup
                            θ::Float64 = 0.15,     #Probability that Calvo fairy visits
                            Rbar::Float64 = 1.005, #Target quarterly interest rate
@@ -125,7 +140,7 @@ function set_parameters( ; β::Float64 = 0.986,    #discount factor
 
  b_grid = logspaceshift(x_min,a_max,nb,logshift)
 
- return params(β,γ,ψ,B,μ,θ,Rbar,nz,z,Πz,Γ,tax_weights,a_min,a_max,nk,nb,k_grid,b_grid)
+ return params(β,γ,ψ,B,μ,θ,Rbar,nz,z,Πz,Γ,tax_weights.*z,a_min,a_max,nk,nb,k_grid,b_grid)
 
 end
 
@@ -135,8 +150,8 @@ end
 
 helper function with two methods to replace par2wide and par2long from the MNS code
 """
-function reshape_c(c::Array{Float64,1},p::params=p)
- @unpack nb,nz = p
+function reshape_c(c::Array{Float64,1},par::params)
+ @unpack nb,nz = par
 
  c_wide = reshape(c,(nb,nz))
 
@@ -145,8 +160,8 @@ function reshape_c(c::Array{Float64,1},p::params=p)
 end
 
 
-function reshape_c(c::Array{Float64,2},p::params=p)
- @unpack nb,nz = p
+function reshape_c(c::Array{Float64,2},par::params)
+ @unpack nb,nz = par
 
  c_long = reshape(c,(nb*nz,1))
 
@@ -154,4 +169,3 @@ function reshape_c(c::Array{Float64,2},p::params=p)
 
 end
 
-end

@@ -6,4 +6,6 @@ include("structs.jl")
 
 include("steady_state.jl")
 
+#include("complete_markets.jl")
+
 end

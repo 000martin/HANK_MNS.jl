@@ -2,27 +2,90 @@
 
 using Interpolations, SparseArrays, LinearAlgebra, NLsolve
 
-
 """
-   get_steady_state(p::params,β_guess::Float64,Y_guess::Float64)
+   get_steady_state()
 
-Solve for β and steady state output so target bond level is reached at the target interest rate (both are specified in p)
-DOES NOT WORK YET!
+Finds the steady state for given interest rate by iterating over β, using a simple bisection type updating algorithm.
+I typically used Y = 0.6 as guess for Y and beta_Range = [0.95,0.99], which works fine. Y_guess not particularly important.
 """
-function get_steady_state(p::params,β_guess::Float64,Y_guess::Float64)
 
-   #@unpack  = p
-   
-   #define objective for nonlinear solver
-   function obj!(Dist,x)
-      Dist = check_steady_state(x[1],x[2],p;return_distance=true)
+#find steady state equilibrium using different method
+function get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64,1};
+                           tolβ::Float64 = 1e-4, tolY::Float64=1e-6  )
+
+   @unpack μ,Rbar,B,Γ,tax_weights,b_grid,k_grid = p
+
+   #outer loop: bisection to find steady state interest rate
+   iterβ = 1; distβ = 1.0; distY = 1.0
+   β = beta_Range[2]; Ys = Y_guess 
+   βmax = beta_Range[2]; βmin = beta_Range[1]
+
+   #generate objects so that they exist outside of while scope
+   agg_assets = 0.0; D = 0.0; C=0.0; L = 0.0;
+   w = 0.0; τ=0.0; div = 0.0; 
+
+   #initial guess for consumption policy
+   c_pol = 0.3 .+ 0.1*p.b_grid; c_pol = repeat(c_pol,1,3)
+
+   while (iterβ<200) & ( (distβ > tolβ) | (distY > tolY) )
+      
+      #distY = 1.0; iterY = 1
+      #while (iterY < 5) & (distY>tolY)
+         #inner loop will initially not converge
+
+         R = Rbar; w = 1/μ; τ = B*Ys*(1-1/R)/(Γ'*tax_weights); div = Ys*(1-w)
+         
+         #get policy functions
+         c_pol = EGM_SS(c_pol, β, Ys, p)
+
+         #get wealth-income transition matrix
+         Pi = forwardmat(c_pol,R,w,τ,div,p)
+
+         #get Steady State wealth distribution
+         D = inv_dist(Pi)
+    
+         #compute aggregate assets
+         agg_assets = dot(D,repeat(k_grid,3,1))
+
+         #get aggregate comsumption and labor (L = steady state output)
+         C, L = aggregate_C_L(D,c_pol,R,w,τ,div,p)
+
+         distY = abs(C-L)
+         #Ys = 0.9*Ys+0.1*C #heuristic update rule
+         Ys = C
+
+       #  iterY = iterY+1
+         #println("Y-iteration: ",iterY," Distance: ",distY," Current Y:",Ys)
+      #end
+    
+
+    distβ = abs(agg_assets - B*Ys)
+    println("β-iteration: ",iterβ," Dist. Assets: ",distβ," Dist. Y: ",distY, " Current β: ", β)
+    println(" ")
+
+    #update β according to bisection rule
+    if β == beta_Range[2]
+      @assert (agg_assets > B*Ys)
+      β = beta_Range[1]
+    elseif β == beta_Range[1]
+      @assert (agg_assets < B*Ys)
+      βprev = β[1]
+      β = mean(beta_Range)
+    else 
+         if (agg_assets > B*Ys)
+         βmax = β[1]
+         elseif (agg_assets < B*Ys)
+         βmin = β[1]
+         end
+         β = mean([βmax,βmin])
+    end
+      
+    iterβ = iterβ+1
    end
 
-   SR = nlsolve(obj!,[β_guess*100,Y_guess]  ) #get solver results
+   SS_structure = steady_state(c_pol,D,Ys,C,L,agg_assets,w,τ,div,Rbar)
 
-   #return steady state structure and the β value we solved for 
-   return SR
-
+ return β, Ys, SS_structure
 end
 
 
@@ -104,7 +167,7 @@ function  EGM_SS(c_guess::Array{Float64,2},β::Float64,Y::Float64,p::params;
 
     iter = iter + 1 #count iterations
     end
-    println("Steady State Analytics")
+    #println("Steady State Analytics")
     println("No. of iterations: ",iter,"  Distance: ",dist)
  
    return c_guess #return steady state policy functions
@@ -435,3 +498,27 @@ function aggregate_C_L(D::Array{Float64,1},c_policies::Array{Float64,2},R::Float
 
    return C,L
 end
+
+
+"""
+   get_steady_state(p::params,β_guess::Float64,Y_guess::Float64)
+
+Solve for β and steady state output so target bond level is reached at the target interest rate (both are specified in p)
+DOES NOT WORK YET!
+
+function get_steady_state(p::params,β_guess::Float64,Y_guess::Float64)
+
+   #@unpack  = p
+   
+   #define objective for nonlinear solver
+   function obj!(Dist,x)
+      Dist = check_steady_state(x[1],x[2],p;return_distance=true)
+   end
+
+   SR = nlsolve(obj!,[β_guess*100,Y_guess]  ) #get solver results
+
+   #return steady state structure and the β value we solved for 
+   return SR
+
+end
+"""

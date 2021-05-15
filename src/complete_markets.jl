@@ -8,18 +8,17 @@ function complete_markets()
     p = set_parameters()
 
     # Add twofold definition of ψ to the p struct
-    p.ψ1 = 1
-    p.ψ2 = 2
+    p.ψ = 1
 
     # Update field values for representative agent case
-    p.ψ1 = p.ψ1 * dot(p.Γ, p.z.^(1+1/p.ψ2)) 
+    p.ψ = p.ψ * dot(p.Γ, p.z.^(1+1/2)) 
     p.β = 1/p.Rbar
     
     # Solve for steady state
     A = 1
     ppi = 1
     wage = 1/p.μ
-    Y = (wage/p.ψ1)^(1/(p.γ + p.ψ))
+    Y = (wage/p.ψ)^(1/(p.γ + p.ψ))
     R = 1/p.β
     C = Y
     S = 1
@@ -89,7 +88,7 @@ function transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst,
             X[ind_N,2:T-1] = Spath[2:T-1].*X[ind_Y,2:T-1]
     
             #labor supply C^(-sigma) * w = psi1 * L^p.psi2
-            X[ind_L,2:T-1] = (wagepath[2:T-1] .* X[ind_C,2:T-1].^(-p.σ) / p.ψ1).^(1/p.ψ2)
+            X[ind_L,2:T-1] = (wagepath[2:T-1] .* X[ind_C,2:T-1].^(-p.σ) / p.ψ).^(1/2)
                 
     
             #plot(X[[ind_N ind_L],:]')
@@ -98,7 +97,7 @@ function transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst,
             
             #adjust wage, dividend
             oldwage = wagepath
-            wagepath[2:T-1] = wagepath[2:T-1].*(X[ind_N,2:T-1]./X[ind_L,2:T-1]).^p.ψ2
+            wagepath[2:T-1] = wagepath[2:T-1].*(X[ind_N,2:T-1]./X[ind_L,2:T-1]).^2
             dividendpath[2:T-1] = (X[ind_Y,2:T-1] - wagepath[2:T-1].*X[ind_N,2:T-1])
             
             test = max(abs(wagepath./oldwage - 1))

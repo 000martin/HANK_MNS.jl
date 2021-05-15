@@ -9,7 +9,7 @@ using Parameters, Roots, QuantEcon, Statistics
 A structure that stores the parameter vector of the model
 """
 
- @with_kw struct  params
+ @with_kw mutable struct  params
     β::Float64 = 0.986    #discount factor
     γ::Float64 = 2.0      #Risk aversion
     ψ::Float64  = 2.0     #inverse Frisch elasticity

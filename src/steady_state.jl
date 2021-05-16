@@ -187,20 +187,22 @@ end
 function solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},τ_path::Array{Float64},
                     div_path::Array{Float64,1},β::Float64,p::params) 
 
-
+  @unpack nb, nz = p
 
   #calculate total amount of periods
   T = size(w_path)[1]
 
   #pre-allocate some arrays for consumption paths
   c_path = zeros(size(repeat(c_final,1,T)))
+  temp   = Array{Float64,2}(undef,nb,nz)
+
   #set final values
   c_path[:,end] .= c_final 
 
   #solving back
   for t = T-1:-1:1
 
-  temp =  EGM(reshape_c(c_path[:,t+1],p),β, R_path[t:t+1], w_path[t:t+1],
+  temp[:,:] .=  EGM(reshape_c(c_path[:,t+1],p),β, R_path[t:t+1], w_path[t:t+1],
                τ_path[t:t+1], div_path[t:t+1],p)
 
    c_path[:,t] .= reshape_c(temp,p)

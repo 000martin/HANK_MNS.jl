@@ -22,10 +22,7 @@ function get_transition_full(TR::Int,T::Int,p::params,SS::steady_state; RChange:
     #get transition path
     tp = solve_for_transition(Rpath,wpath,div_path,Spath,SS,p)
 
-    #plot it 
- 
-
-    
+    return tp 
 end
 
 """
@@ -35,33 +32,42 @@ Solves for the perfect foresight transition path for a given interest rate path.
 Note that guesses should include SS values as final element.
 """
 
-function solve_for_transition(Rpath::Array{Float64,1},wpath::Array{Float64,1},div_path::Array{Float64,1},
+function solve_for_transition(Rpath::Array{Float64,1},wguess::Array{Float64,1},div_path::Array{Float64,1},
                             Spath::Array{Float64,1},SS::steady_state,p::params; S_tol::Float64= 1e-6, w_tol::Float64 = 1e-6)
 
  #unpack some parameters
- @unpack B,tax_weights, Γ, ψ, μ, β , θ = p
+ @unpack B,tax_weights, Γ, ψ, μ, β , θ , nk, nz, nb = p
 
 
  #back out number of periods
  T = length(Rpath)   
 
  #get path for tax rate
- τ_path = (p.B/(Γ'*tax_weights))*(1.0 .- 1.0./Rpath)
+ τ_path = (B*SS.Y/(Γ'*tax_weights))*(1.0 .- 1.0./Rpath)
+ wpath = wguess[:] ; 
+
+ #make objects exist outside while loop
+ Ypath = ones(T-1) ; pΠpath = ones(T)  
+ Dpath = Array{Float64,2}(undef,nk*nz,T) ; cpol_path =  Array{Float64,2}(undef,nb*nz,T)
 
  #outer loop solving for S (price dispersion) path
  iterS = 1 ; distS = 1.0
  while (iterS < 100) & (distS > S_tol )
 
-
+    
     #inner loop solving for wage path
     iterW = 1 ; distW = 1.0
-    while (iterW < 100) & (distW > w_tol)
+    while (iterW < 10) & (distW > w_tol) #does not need to converge fully for every S iteration
     
     #solve HH problem backwards
-    cpol_path = solveback(reshape_c(SS.c_policies,p),Rpath,wpath,τ_path,div_path,β,p)
+    cs = solveback(reshape_c(SS.c_policies,p),wpath,Rpath,τ_path,div_path,β,p)
+    cpol_path = cs
 
     #use result to simulate aggregate forwards
-    Cpath,Lpath,Bpath,Dpath = simulate_forward(SS.D,cpol_path,Rpath,wpath,div_path,τ_path,p)
+    Cpath,Lpath,Bpath,Ds = simulate_forward(SS.D,cpol_path,Rpath,wpath,div_path,τ_path,p)
+
+    #define distribution path
+    Dpath = Ds
 
     #define output path
     Ypath = Cpath[:]
@@ -79,21 +85,22 @@ function solve_for_transition(Rpath::Array{Float64,1},wpath::Array{Float64,1},di
     div_path[1:T-1] = Ypath[1:T-1] .- wpath[1:T-1].*Npath[1:T-1]
 
     #calculate distance
-    distW = maximum(abs.(wpath./oldwage[1:T-1] .- 1.0))
+    distW = maximum(abs.(wpath[1:T-1]./oldwage[1:T-1] .- 1.0))
 
     println("Current W distance: ", distW," Current wage iteration: ",iterW)
+    iterW = iterW + 1
     end
 
     #initialize pbarA and pbarB terms (nominator and denominator in MNS eqaution (7))
     pbarA = μ*SS.w*SS.Y / (1-β*(1-θ)) ; pbarB = SS.Y/(1-β*(1-θ))
 
     #pre-allocate
-    ppipath = ones(T) ; pstar = ones(T-1) 
+    pΠpath = ones(T) ; pstar = ones(T-1) 
 
     #solve backwards for pbarA, pbarB and reset inflation
     for t = T-1:-1:1
-        pbarA = μ*wpath[t]*Ypath[t] + β*(1-θ)*(ppipath(t+1)^(μ/(μ-1)))*pbarA
-        pbarB = Ypath[t] + β*(1-θ)*(ppipath(t+1)^(1/(μ-1)))*pbarB
+        pbarA = μ*wpath[t]*Ypath[t] + β*(1-θ)*(pΠpath[t+1]^(μ/(μ-1)))*pbarA
+        pbarB = Ypath[t] + β*(1-θ)*(pΠpath[t+1]^(1/(μ-1)))*pbarB
         pstar[t] = pbarA/pbarB
         pΠpath[t] = ((1-θ)/(1-θ*pstar[t]^(1/(1-μ))))^(1-μ)
     end
@@ -110,6 +117,8 @@ function solve_for_transition(Rpath::Array{Float64,1},wpath::Array{Float64,1},di
     distS = maximum(abs.(Spath./oldS .- 1.0))
     println("Current S distance: ", distS," Current S iteration: ",iterS)
     println(" ")
+
+    iterS = iterS + 1
  end
 
  return transition_full(Spath,wpath,pΠpath,Ypath,Rpath,τ_path,div_path,Dpath,cpol_path)

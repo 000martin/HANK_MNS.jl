@@ -17,6 +17,7 @@ export get_transition_full, solve_for_transition
 end
 
 """
+#test code
 using Main.HANK_MNS
 p0 = set_parameters()
 
@@ -24,5 +25,5 @@ b,y,SS = get_steady_state(p0,0.9,[0.95,0.99])
 
 p1 = set_parameters(β = b)
 
-get_transition_full(20,200,p1,SS)
+ tr = get_transition_full(20,200,p1,SS)
 """

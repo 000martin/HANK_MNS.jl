@@ -58,8 +58,6 @@ Y::Array{Float64,1}         #output
 R::Array{Float64,1}         #interest rates
 τ::Array{Float64,1}         #tax rates
 div::Array{Float64,1}       #dividends
-Ds::Array{Float64,2}        #Distributions
-cpol::Array{Float64,2}      #household policy functions
 end
 
 

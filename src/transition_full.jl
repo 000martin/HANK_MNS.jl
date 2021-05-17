@@ -57,17 +57,17 @@ function solve_for_transition(Rpath::Array{Float64,1},wguess::Array{Float64,1},d
     
     #inner loop solving for wage path
     iterW = 1 ; distW = 1.0
-    while (iterW < 10) & (distW > w_tol) #does not need to converge fully for every S iteration
+    while (iterW < 100) & (distW > w_tol) #does not need to converge fully for every S iteration
     
     #solve HH problem backwards
     cs = solveback(reshape_c(SS.c_policies,p),wpath,Rpath,τ_path,div_path,β,p)
     cpol_path = cs
 
     #use result to simulate aggregate forwards
-    Cpath,Lpath,Bpath,Ds = simulate_forward(SS.D,cpol_path,Rpath,wpath,div_path,τ_path,p)
+    Cpath,Lpath,Bpath = simulate_forward(SS.D,cpol_path,Rpath,wpath,div_path,τ_path,p)
 
     #define distribution path
-    Dpath = Ds
+    #Dpath = Ds
 
     #define output path
     Ypath = Cpath[:]
@@ -121,7 +121,7 @@ function solve_for_transition(Rpath::Array{Float64,1},wguess::Array{Float64,1},d
     iterS = iterS + 1
  end
 
- return transition_full(Spath,wpath,pΠpath,Ypath,Rpath,τ_path,div_path,Dpath,cpol_path)
+ return transition_full(Spath,wpath,pΠpath,Ypath,Rpath,τ_path,div_path)
 
 end
 
@@ -136,22 +136,32 @@ Simulates a distribution of households and computes total consumption (C), labor
 function simulate_forward(D0::Array{Float64,1},cpol_path::Array{Float64,2},Rpath::Array{Float64,1},
                         wpath::Array{Float64,1},div_path::Array{Float64,1},τ_path::Array{Float64,1},p::params)
 
+ @unpack k_grid = p
+
  #back out number of periods
  T = length(Rpath)
 
  #pre-allocate some arrays
  Cpath = Array{Float64,1}(undef,T-1);  Lpath = Array{Float64,1}(undef,T-1)
- Bpath = Array{Float64,1}(undef,T-1);  Dpath = Array{Float64,2}(undef,p.nz*p.nk,T)
+ Bpath = Array{Float64,1}(undef,T-1)  
+ Dpath = Array{Float64,2}(undef,p.nz*p.nk,T)
  Dpath[:,1] .= D0 
 
  for t = 1:T-1
- Cpath[t], Lpath[t], Bpath[t], Dpath[:,t+1] = simulate_step(Dpath[:,t],reshape_c(cpol_path[:,t],p)
-                                            ,Rpath[t],wpath[t],τ_path[t],div_path[t],p)
+ # Cpath[t], Lpath[t], Bpath[t], Dpath[:,t+1]  = simulate_CLB(Dpath[:,t],reshape_c(cpol_path[:,t],p)
+ #                                                  ,Rpath[t],wpath[t],τ_path[t],div_path[t],p)
 
+ #simulate forward
+  Cpath[t],Lpath[t] = aggregate_C_L(Dpath[:,t],reshape_c(cpol_path[:,t],p),Rpath[t],wpath[t],τ_path[t],div_path[t],p)
+  Dpath[:,t+1]     .= forward_dist(Dpath[:,t],forwardmat(reshape_c(cpol_path[:,t],p),Rpath[t],wpath[t],τ_path[t],div_path[t],p))
+  Bpath[t]          = dot(Dpath[:,t+1],repeat(k_grid,3))
+
+ #check distribution
+ @assert (abs(sum(Dpath[:,t+1]) - 1.0) < 1e-6)
  end
  
 
- return Cpath , Lpath, Bpath, Dpath
+ return Cpath , Lpath, Bpath
 
     
 end
@@ -160,7 +170,7 @@ end
     simulate_step()
 
 Conducts forward simulation for one period. Helper function to simulate_forward, equivalent to simulatestep() in MNS code.
-
+Originally used in loop in Simulate_forward, replaced it to do pre-allocation there.
 """
 function simulate_step(D::Array{Float64,1},c_pol::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64,p::params)
 
@@ -182,4 +192,13 @@ function simulate_step(D::Array{Float64,1},c_pol::Array{Float64,2},R::Float64,w:
 
  return C, L, Assets, Dprime
     
+end
+
+"""
+    forward_dist
+
+Calculates Asset distribution in next period given transition matrix Pi and current distribution D
+"""
+function forward_dist(D::Array{Float64,1},Pi::SparseMatrixCSC)
+return Pi'*D
 end

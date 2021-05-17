@@ -187,20 +187,22 @@ end
 function solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},τ_path::Array{Float64},
                     div_path::Array{Float64,1},β::Float64,p::params) 
 
-
+  @unpack nb, nz = p
 
   #calculate total amount of periods
   T = size(w_path)[1]
 
   #pre-allocate some arrays for consumption paths
   c_path = zeros(size(repeat(c_final,1,T)))
+  temp   = Array{Float64,2}(undef,nb,nz)
+
   #set final values
   c_path[:,end] .= c_final 
 
   #solving back
   for t = T-1:-1:1
 
-  temp =  EGM(reshape_c(c_path[:,t+1],p),β, R_path[t:t+1], w_path[t:t+1],
+  temp[:,:] .=  EGM(reshape_c(c_path[:,t+1],p),β, R_path[t:t+1], w_path[t:t+1],
                τ_path[t:t+1], div_path[t:t+1],p)
 
    c_path[:,t] .= reshape_c(temp,p)
@@ -384,13 +386,13 @@ function forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,di
          
          #this will generate the row indices of the sparse transition matrix
          #this indicates the position the agents come from
-         IR[idx1:idx2] = offsi .+ From 
+         IR[idx1:idx2] .= offsi .+ From 
          #this will generate the column indices of the sparse transition matrix
          #this where they go to
-         IC[idx1:idx2] = offsj .+ To
+         IC[idx1:idx2] .= offsj .+ To
          #this will be the entries of the sparse transition matrix
          #and this the probabilities where they will go to
-         VV[idx1:idx2] = ppj*Probs
+         VV[idx1:idx2] .= ppj*Probs
 
              
          idx1 = idx1 + 2*nk #update index variable
@@ -427,7 +429,7 @@ function lineartrans(bp::Array{Float64,1},par::params)
  
  pHigh = (k0 .- k_grid[iPos])./(k_grid[iPos.+1]-k_grid[iPos])
 
- From = repeat(collect(1:nk),2,1)
+ From = repeat(collect(1:nk),2)
  To   = vcat(iPos,iPos .+ 1)
  Probs= vcat(1 .- pHigh,pHigh)
 
@@ -481,14 +483,17 @@ function aggregate_C_L(D::Array{Float64,1},c_policies::Array{Float64,2},R::Float
    @unpack nz,nk,k_grid,z = p
 
    #loop over income states
-   L = 0.0; C = 0.0; #initialize
+   L = 0.0; C = 0.0 #initialize
+   c = Array{Float64,1}(undef,nk) ; n = Array{Float64,1}(undef,nk)
    for i = 1:nz
 
       #for simple indexing
       idx = (i - 1)*nk
 
       #get consumption and labor supply for income/wealth bin
-      c,n, = get_cnbp(k_grid,c_policies,R,w,τ,div,i,p)
+      #c,n, = get_cnbp(k_grid,c_policies,R,w,τ,div,i,p)
+      temp = get_cnbp(k_grid,c_policies,R,w,τ,div,i,p)
+      c[:] .= temp[1] ; n[:] .= temp[2]
 
       #sum up (using dot product)
       C = C + dot(D[idx+1:idx+nk],c)

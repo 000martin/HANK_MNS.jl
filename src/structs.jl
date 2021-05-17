@@ -47,6 +47,20 @@ struct steady_state
 end
 
 
+"""
+A structure that stores the full model transition
+"""
+struct transition_full
+S::Array{Float64,1}         #price dispersion
+w::Array{Float64,1}         #wages
+pΠ::Array{Float64,1}        #reset inflation
+Y::Array{Float64,1}         #output
+R::Array{Float64,1}         #interest rates
+τ::Array{Float64,1}         #tax rates
+div::Array{Float64,1}       #dividends
+end
+
+
 
 """
     logspaceshift(xa::Float64,xb::Float64,n::Int,x2::Float64,n_at_x2::Float64)

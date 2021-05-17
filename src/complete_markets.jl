@@ -1,3 +1,5 @@
+using LinearAlgebra
+
 """
    complete_markets()
 
@@ -6,6 +8,7 @@
 function complete_markets()
     
     p = set_parameters()
+
 
     # Add twofold definition of ψ to the p struct
     p.ψ = 1
@@ -34,22 +37,29 @@ function complete_markets()
     nvar = length(names)
     stst = zeros(nvar,1)
 
-    for i in eachindex(nvar)
-        eval("stst[i] =" names[i])
-        eval("ind_" names[i] " = i")
-    end
+    #for i in eachindex(nvar)
+    #eval("stst[i] =" names[i])
+    #    eval("ind_" names[i] " = i")
+    #end
 
+    stst[1] = R; stst[2] = A; stst[3] = S; stst[4] = wage; stst[5] = dividend; stst[6] = ppi; stst[7] = Y;
+    stst[8] = C; stst[9] = N; stst[10] = L; stst[11] = pbarB; stst[12] = pbarA; stst[13] = pstar 
+
+    ind_R = 1; ind_A = 2; ind_S = 3; ind_wage = 4; ind_dividend = 5; ind_ppi = 6; ind_Y = 7; ind_C = 8; 
+    ind_N = 9; ind_L = 10; ind_pbarB = 11; ind_pbarA = 12; ind_pstar = 13
+    
     # Solve for transition
     T = 200
 
     # Initial guesses
-    [R, w] = steadystateprices()
-    wagepath = repeat(w,1,T)
-    dividendpath = repeat(stst[ind_dividend],1,T)
+    w = 1/p.μ
+    R = p.Rbar
+    wagepath = fill(w,1,T)
+    dividendpath = fill(stst[ind_dividend],1,T)
     Spath = ones(1,T)
     
     # Policy
-    Rpath =  repeat(R,1,T)
+    Rpath =  fill(R,1,T)
     HORIZ = 20
     Rpath[HORIZ+2] = 1
     
@@ -63,13 +73,16 @@ end
 
 """
 
-function transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst, names, p::p)
+function transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst, names, p::params)
     
     nvar = length(names)
 
-    for i in eachindex(nvar)
-        eval("ind_" names[i] = i)
-    end
+    #for i in eachindex(nvar)
+    #    eval("ind_" names[i] = i)
+    #end
+
+    ind_R = 1; ind_A = 2; ind_S = 3; ind_wage = 4; ind_dividend = 5; ind_ppi = 6; ind_Y = 7; ind_C = 8; 
+    ind_N = 9; ind_L = 10; ind_pbarB = 11; ind_pbarA = 12; ind_pstar = 13
 
     T = length(Rpath)
 
@@ -81,14 +94,14 @@ function transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst,
             
             for t = T-1:-1:2
                 #solve backwards using Euler
-                X[ind_C,t] = (p.β * Rpath[t])^(-1/p.σ) * X[ind_C,t+1]
+                X[ind_C,t] = (p.β * Rpath[t])^(-1/p.γ) * X[ind_C,t+1]
             end
     
             X[ind_Y,2:T-1] = X[ind_C,2:T-1]
             X[ind_N,2:T-1] = Spath[2:T-1].*X[ind_Y,2:T-1]
     
             #labor supply C^(-sigma) * w = psi1 * L^p.psi2
-            X[ind_L,2:T-1] = (wagepath[2:T-1] .* X[ind_C,2:T-1].^(-p.σ) / p.ψ).^(1/2)
+            X[ind_L,2:T-1] = (wagepath[2:T-1] .* X[ind_C,2:T-1].^(-p.γ) / p.ψ).^(1/2)
                 
     
             #plot(X[[ind_N ind_L],:]')
@@ -99,10 +112,11 @@ function transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst,
             oldwage = wagepath
             wagepath[2:T-1] = wagepath[2:T-1].*(X[ind_N,2:T-1]./X[ind_L,2:T-1]).^2
             dividendpath[2:T-1] = (X[ind_Y,2:T-1] - wagepath[2:T-1].*X[ind_N,2:T-1])
-            
-            test = max(abs(wagepath./oldwage - 1))
+         
+        # Hier gibt es noch ein Problem
+            test = findmax(abs.(wagepath./oldwage .- 1))
             println(string("Residual in wage path: ", test))
-            if test < 1e-6, break end
+            if test < 1e-6 break end
         end
         
         # Now compute inflation and S
@@ -131,10 +145,12 @@ function transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst,
             Spath[t] = (1-p.θ)*Slast*X(ind_ppi,t)^(-p.μ/(1-p.μ)) + p.θ*pstar(t)^(p.μ/(1-p.μ))
             Slast = Spath[t]
         end
-        
+    
+      # Letzter Bug, broadcasten hat es irgendwie nicht getan 
+      # Das habe ich versucht: findmax(abs.(Spath./oldS - 1)) 
         test = max(abs(Spath./oldS - 1 ))
         println(string("Residual in S path: ", test))
-        if test < 1e-6, break end
+        if test < 1e-6 break end
     end
     
     X[ind_wage,:] = wagepath

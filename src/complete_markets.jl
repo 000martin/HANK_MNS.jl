@@ -57,6 +57,15 @@ function complete_markets()
     
     eqm = transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst, name, p::params)
 
+    Spath = vec(Spath)
+    wagepath = vec(wagepath)
+    Rpath = vec(Rpath)
+    dividendpath = vec(dividendpath)
+    Ypath = eqm[ind_Y,2:T-1]./stst[ind_Y].-1
+    pΠpath = eqm[ind_ppi,2:T-1].-1
+
+   return  transition_complete_markets(Spath,wagepath,pΠpath,Ypath,Rpath,dividendpath)
+
 end
 
 
@@ -134,5 +143,5 @@ function transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst,
     
     X[ind_wage,:] = wagepath
     eqm = X
-    
+
 end

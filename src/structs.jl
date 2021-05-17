@@ -58,6 +58,18 @@ Y::Array{Float64,1}         #output
 R::Array{Float64,1}         #interest rates
 τ::Array{Float64,1}         #tax rates
 div::Array{Float64,1}       #dividends
+end   
+
+"""
+A structure that stores the complete markets transition
+"""
+struct transition_complete_markets
+S::Array{Float64,1}         #price dispersion
+w::Array{Float64,1}         #wages
+pΠ::Array{Float64,1}        #reset inflation
+Y::Array{Float64,1}         #output
+R::Array{Float64,1}         #interest rates
+div::Array{Float64,1}       #dividends
 end
 
 

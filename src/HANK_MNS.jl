@@ -14,6 +14,9 @@ export get_transition_full, solve_for_transition
 
 #include("complete_markets.jl")
 
+include("paper_results.jl")
+export get_table_2
+
 end
 
 """

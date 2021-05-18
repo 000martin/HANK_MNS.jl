@@ -20,6 +20,6 @@ using Test, HANK_MNS
  @test abs((tr.Y[1]/SS.Y) - 1.001) <1e-4
 
  #compare initial inflation response - ca. 0.3 percentage points for inflation
- @test abs((tr.pΠ[1]-1.003) <1e-4
+ @test abs(tr.pΠ[1]-1.003) <1e-4
 
 end;

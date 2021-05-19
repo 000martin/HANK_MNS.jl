@@ -3,10 +3,12 @@
 using Interpolations, SparseArrays, LinearAlgebra, NLsolve
 
 """
-   get_steady_state()
+   get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64,1};
+   tolβ::Float64 = 1e-6, tolY::Float64=1e-6  )
 
 Finds the steady state for given interest rate by iterating over β, using a simple bisection type updating algorithm.
-I typically used Y = 0.6 as guess for Y and beta_Range = [0.95,0.99], which works fine. Y_guess not particularly important.
+I typically used Y = 0.6 as guess for Y and beta_Range = [0.95,0.99] for the baseline calibration and [0.97,0.995] 
+for the high asset calibration, which works fine. Y_guess not particularly important, I use the same as MNS.
 """
 
 #find steady state equilibrium using different method
@@ -28,10 +30,6 @@ function get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64
    c_pol = 0.3 .+ 0.1*p.b_grid; c_pol = repeat(c_pol,1,3)
 
    while (iterβ<200) & ( (distβ > tolβ) | (distY > tolY) )
-      
-      #distY = 1.0; iterY = 1
-      #while (iterY < 5) & (distY>tolY)
-         #inner loop will initially not converge
 
          R = Rbar; w = 1/μ; τ = B*Ys*(1-1/R)/(Γ'*tax_weights); div = Ys*(1-w)
          
@@ -50,16 +48,9 @@ function get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64
          #get aggregate comsumption and labor (L = steady state output)
          C, L = aggregate_C_L(D,c_pol,R,w,τ,div,p)
 
-         distY = abs(C-L)
-         #Ys = 0.9*Ys+0.1*C #heuristic update rule
-         Ys = C
-
-       #  iterY = iterY+1
-         #println("Y-iteration: ",iterY," Distance: ",distY," Current Y:",Ys)
-      #end
+         distY = abs(C-L)  #distance between consumption and output
+         Ys = C #update
     
-
-    #distβ = abs(agg_assets - B*Ys)
     distβ = abs(agg_assets/(B*Ys) - 1.0)
     println("β-iteration: ",iterβ," Dist. Assets: ",distβ," Dist. Y: ",distY, " Current β: ", β)
     println(" ")
@@ -83,7 +74,8 @@ function get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64
       
     iterβ = iterβ+1
    end
-
+   
+   #return steady state structure
    SS_structure = steady_state(c_pol,D,Ys,C,L,agg_assets,w,τ,div,Rbar)
 
  return β, Ys, SS_structure
@@ -98,6 +90,7 @@ as implied by the household decisions and returns the distance between output
 implied by labor and output implied by consumption as well as the distance between household
 asset choices and the asset target. It can be used in an Root-Finding algorithm to find the β
 corresponding to the asset and interest rate target.
+NOTE: This function is not used in the current implemenation of the model.
 """
 function check_steady_state(beta::Float64,Y::Float64,p::params;return_distance::Bool=false)
 
@@ -144,9 +137,10 @@ end
 
 
 """
-    EGM_SS(β::Float64,Y::Float64,p::params)
+   EGM_SS(c_guess::Array{Float64,2},β::Float64,Y::Float64,p::params;
+   T::Int=30, maxit::Int = 500, tol::Float64 = 1e-7)
 
-Computes household steady state (SS) savings and labor supply using the endogenous grid method (EGM).
+Computes household steady state (SS) consumption using the endogenous grid method (EGM).
 """
 function  EGM_SS(c_guess::Array{Float64,2},β::Float64,Y::Float64,p::params;
                  T::Int=30, maxit::Int = 500, tol::Float64 = 1e-7)
@@ -162,14 +156,13 @@ function  EGM_SS(c_guess::Array{Float64,2},β::Float64,Y::Float64,p::params;
     c_policies = solveback(reshape_c(c_guess,p),w*ones(T),R*ones(T),τ*ones(T),
     D*ones(T),β,p)
 
-    dist = maximum(abs.(c_policies[:,1].-c_policies[:,2])) #measure maximum distance
+    dist = maximum(abs.(c_policies[:,2].-c_policies[:,3])) #measure maximum distance
 
-    c_guess = reshape_c(c_policies[:,1],p) #update policy rules
+    c_guess = reshape_c(c_policies[:,2],p) #update policy rules
 
     iter = iter + 1 #count iterations
     end
-    #println("Steady State Analytics")
-    println("No. of iterations: ",iter,"  Distance: ",dist)
+    println("No. of iterations HH problem: ",iter,"  Distance: ",dist)
  
    return c_guess #return steady state policy functions
 
@@ -177,12 +170,13 @@ end
 
 
 """
-    solveback()
+   solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},τ_path::Array{Float64},
+   div_path::Array{Float64,1},β::Float64,p::params) 
 
- Solves backwards from a period (e.g. steady state) in which decision rules are known
- and given price/dividend paths. Relies on function EGM.
- (at the moment, this still omits β-heterogeneity).
- In w_path etc, the final values must correspond to the period to solve back from
+Solves backwards from a period (e.g. steady state) in which decision rules are known
+and given price/dividend paths. Relies on function EGM.
+(at the moment, this still omits β-heterogeneity).
+In w_path,τ_path etc., the final values must correspond to the period to solve back from.
 """
 
 function solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},τ_path::Array{Float64},
@@ -201,7 +195,7 @@ function solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Ar
   c_path[:,end] .= c_final 
 
   #solving back
-  for t = T-1:-1:1
+  for t = T-1:-1:2
 
   temp[:,:] .=  EGM(reshape_c(c_path[:,t+1],p),β, R_path[t:t+1], w_path[t:t+1],
                τ_path[t:t+1], div_path[t:t+1],p)
@@ -216,11 +210,11 @@ end
 
 
 """
-    margU(c::Float64,par::params)
+   margU(c::Float64,par::params,order::Int64=1)
 
- Helper function, computes marginal utility of consumption or second derivative of utility function (if order = 2)
+Helper function, computes marginal utility of consumption or second derivative of utility function (if order = 2)
 """
-function margU(c::Float64,par::params,order::Int=1)
+function margU(c::Float64,par::params,order::Int64=1)
  if order == 1
     return mu = c^(-par.γ)
  elseif order == 2
@@ -235,11 +229,12 @@ end
     get_cnbp(xthis::Array{Float64},c::Array{Float64},R::Float64,
             w::Float64,τ::Float64,p::params,inc_idx::Int)
 
-Helper function to retrieve some values
-
+Helper function that, given the HH policy function and factor prices, taxes, etc.,
+interpolates the HH policy function to the values in xthis and computes
+corresponding labor supply and savings.
 """
 function get_cnbp(xthis::Array{Float64,1},cons::Array{Float64,2},R::Float64,
-w::Float64,τ::Float64,div::Float64,inc_idx::Int,p::params)
+w::Float64,τ::Float64,div::Float64,inc_idx::Int64,p::params)
 
  @unpack b_grid,ψ,z,tax_weights = p
 
@@ -355,25 +350,28 @@ end
 """
    forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64)
 
-Generates a transition matrix for the aggregate wealth distribution. Uses the function lineartrans() as 
+Generates a transition matrix for the aggregate wealth distribution. Uses the helper function lineartrans() as 
 in the original code.
 """
 
 function forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64, par::params)
 
-   @unpack nk,nz,k_grid,Πz = par
+   @unpack nk, nz, k_grid, Πz = par
 
 
    #pre-allocate some Arrays:
    IR = Array{Int64,1}(undef,2*nk*nz^2); IC = Array{Int64,1}(undef,2*nk*nz^2)
-   VV =  Array{Float64,1}(undef,2*nk*nz^2)
-   
+   VV =  Array{Float64,1}(undef,2*nk*nz^2)   
+
+   #will always be the same 
+   From = repeat(collect(1:nk),2)
+
    idx1 = 1 #variable used for indexing below
    for i = 1:nz
    
     bp = get_cnbp(k_grid,c_opt,R,w,τ,div,i,par)[3] #saving choices for income type
 
-    From, To, Probs = lineartrans(bp,par) #get transitions
+    To, Probs = lineartrans(bp,par) #get transitions
 
     #aux. variables used for indexing below
     offsi = (i-1)*nk 
@@ -417,24 +415,24 @@ function lineartrans(bp::Array{Float64,1},par::params)
  @unpack nk, k_grid = par
  
  #remove values higher than maximum on asset grid
- k0 = minimum(hcat(bp,maximum(k_grid)*ones(size(bp))),dims = 2)[:]
+ k0 = min.(bp,maximum(k_grid))
 
  #make sure all values are above 0
- k0 = maximum(hcat(k0,zeros(size(k0))),dims = 2)[:]
+ k0 .= max.(k0,0.0)
 
  #find next closest value on grid that is lower for each element of k0
  iPos = find_closest_lower.(k0,(k_grid,))
+
  #make sure no value in iPos exceed nk - 1
- iPos = minimum(hcat(iPos,(nk-1)*repeat([1],nk)),dims = 2)[:] 
+ iPos .= min.(iPos,nk-1) 
  
- 
+ #probability that HH goes to next highest point on grid
  pHigh = (k0 .- k_grid[iPos])./(k_grid[iPos.+1]-k_grid[iPos])
 
- From = repeat(collect(1:nk),2)
  To   = vcat(iPos,iPos .+ 1)
  Probs= vcat(1 .- pHigh,pHigh)
 
- return From, To, Probs
+ return To, Probs
 
 end
 
@@ -442,34 +440,25 @@ end
 """
    find_closest_lower(x::Float64,grid::Array{Float64,1})
 
-Helper function for lineartrans
+Helper function for lineartrans. Finds the next lower asset point on the grid for savings choice x.
 """
-function find_closest_lower(x::Float64,grid::Array{Float64,1}=k_grid)
 
-   closest_index = argmin(abs.(x.-grid))
-   if grid[closest_index] <= x
-      return closest_index
-   else
-      return closest_index - 1
-   end
+function find_closest_lower(x::Float64,grid::Array{Float64,1})
+   return findlast(y -> y <= x, grid)
 end
 
-"""
-   inv_dist
 
-Find invariant distribution by iterating over transition matrix
-uses insights from https://discourse.julialang.org/t/stationary-distribution-with-sparse-transition-matrix/40301
+"""
+   inv_dist(Π::SparseMatrixCSC)
+
+Find invariant steady state wealth distribution by solving for the eigenvector corresponding to the 
+unit eigenvalue of the transition matrix.
+Uses insights from https://discourse.julialang.org/t/stationary-distribution-with-sparse-transition-matrix/40301
 """
 function inv_dist(Π::SparseMatrixCSC)
 
    x = [1; (I - Π'[2:end,2:end]) \ Vector(Π'[2:end,1])]
    return dist = x./sum(x) 
-
-   #uncomment below for conventional method - takes longer
-   
-   #n = size(Π)[1]
-   #mc = MarkovChain(Array(Π),collect(1:n))
-   #return stationary_distributions(mc)[1]
 
 end
 
@@ -493,8 +482,6 @@ function aggregate_C_L(D::Array{Float64,1},c_policies::Array{Float64,2},R::Float
 
       #get consumption and labor supply for income/wealth bin
       c,n, = get_cnbp(k_grid,c_policies,R,w,τ,div,i,p)
-      #temp = get_cnbp(k_grid,c_policies,R,w,τ,div,i,p)
-      #c[:] .= temp[1] ; n[:] .= temp[2]
 
       #sum up (using dot product)
       C = C + dot(D[idx+1:idx+nk],c)
@@ -506,6 +493,8 @@ function aggregate_C_L(D::Array{Float64,1},c_policies::Array{Float64,2},R::Float
 end
 
 
+
+#below are some code residuals
 """
    get_steady_state(p::params,β_guess::Float64,Y_guess::Float64)
 

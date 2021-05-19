@@ -11,7 +11,7 @@ I typically used Y = 0.6 as guess for Y and beta_Range = [0.95,0.99], which work
 
 #find steady state equilibrium using different method
 function get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64,1};
-                           tolβ::Float64 = 1e-4, tolY::Float64=1e-6  )
+                           tolβ::Float64 = 1e-6, tolY::Float64=1e-6  )
 
    @unpack μ,Rbar,B,Γ,tax_weights,b_grid,k_grid = p
 
@@ -59,7 +59,8 @@ function get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64
       #end
     
 
-    distβ = abs(agg_assets - B*Ys)
+    #distβ = abs(agg_assets - B*Ys)
+    distβ = abs(agg_assets/(B*Ys) - 1.0)
     println("β-iteration: ",iterβ," Dist. Assets: ",distβ," Dist. Y: ",distY, " Current β: ", β)
     println(" ")
 
@@ -237,7 +238,7 @@ end
 Helper function to retrieve some values
 
 """
-function get_cnbp(xthis::Array{Float64},cons::Array{Float64,2},R::Float64,
+function get_cnbp(xthis::Array{Float64,1},cons::Array{Float64,2},R::Float64,
 w::Float64,τ::Float64,div::Float64,inc_idx::Int,p::params)
 
  @unpack b_grid,ψ,z,tax_weights = p
@@ -484,16 +485,16 @@ function aggregate_C_L(D::Array{Float64,1},c_policies::Array{Float64,2},R::Float
 
    #loop over income states
    L = 0.0; C = 0.0 #initialize
-   c = Array{Float64,1}(undef,nk) ; n = Array{Float64,1}(undef,nk)
+   #c = Array{Float64,1}(undef,nk) ; n = Array{Float64,1}(undef,nk)
    for i = 1:nz
 
       #for simple indexing
       idx = (i - 1)*nk
 
       #get consumption and labor supply for income/wealth bin
-      #c,n, = get_cnbp(k_grid,c_policies,R,w,τ,div,i,p)
-      temp = get_cnbp(k_grid,c_policies,R,w,τ,div,i,p)
-      c[:] .= temp[1] ; n[:] .= temp[2]
+      c,n, = get_cnbp(k_grid,c_policies,R,w,τ,div,i,p)
+      #temp = get_cnbp(k_grid,c_policies,R,w,τ,div,i,p)
+      #c[:] .= temp[1] ; n[:] .= temp[2]
 
       #sum up (using dot product)
       C = C + dot(D[idx+1:idx+nk],c)

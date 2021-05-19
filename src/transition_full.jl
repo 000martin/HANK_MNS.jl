@@ -148,12 +148,11 @@ function simulate_forward(D0::Array{Float64,1},cpol_path::Array{Float64,2},Rpath
  Dpath[:,1] .= D0 
 
  for t = 1:T-1
- # Cpath[t], Lpath[t], Bpath[t], Dpath[:,t+1]  = simulate_CLB(Dpath[:,t],reshape_c(cpol_path[:,t],p)
- #                                                  ,Rpath[t],wpath[t],τ_path[t],div_path[t],p)
 
  #simulate forward
-  Cpath[t],Lpath[t] = aggregate_C_L(Dpath[:,t],reshape_c(cpol_path[:,t],p),Rpath[t],wpath[t],τ_path[t],div_path[t],p)
-  Dpath[:,t+1]     .= forward_dist(Dpath[:,t],forwardmat(reshape_c(cpol_path[:,t],p),Rpath[t],wpath[t],τ_path[t],div_path[t],p))
+  cpols = reshape_c(cpol_path[:,t],p)
+  Cpath[t],Lpath[t] = aggregate_C_L(Dpath[:,t],cpols,Rpath[t],wpath[t],τ_path[t],div_path[t],p)
+  Dpath[:,t+1]     .= forward_dist(Dpath[:,t],forwardmat(cpols,Rpath[t],wpath[t],τ_path[t],div_path[t],p))
   Bpath[t]          = dot(Dpath[:,t+1],repeat(k_grid,3))
 
  #check distribution
@@ -171,6 +170,11 @@ end
 
 Conducts forward simulation for one period. Helper function to simulate_forward, equivalent to simulatestep() in MNS code.
 Originally used in loop in Simulate_forward, replaced it to do pre-allocation there.
+
+The following was originally in the simulate forward loop
+# Cpath[t], Lpath[t], Bpath[t], Dpath[:,t+1]  = simulate_CLB(Dpath[:,t],reshape_c(cpol_path[:,t],p)
+#                                                  ,Rpath[t],wpath[t],τ_path[t],div_path[t],p)
+
 """
 function simulate_step(D::Array{Float64,1},c_pol::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64,p::params)
 
@@ -185,7 +189,7 @@ function simulate_step(D::Array{Float64,1},c_pol::Array{Float64,2},R::Float64,w:
  Dprime = Pi'*D
 
  #aggregate assets
- Assets = dot(Dprime,repeat(k_grid,3,1))
+ Assets = dot(Dprime,repeat(k_grid,3))
 
  #test for validity of distribution 
  @assert (abs(sum(Dprime) - 1.0) < 1e-6)

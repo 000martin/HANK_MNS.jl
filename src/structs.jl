@@ -13,6 +13,7 @@ A structure that stores the parameter vector of the model
     β::Float64 = 0.986    #discount factor
     γ::Float64 = 2.0      #Risk aversion
     ψ::Float64  = 2.0     #inverse Frisch elasticity
+    ψ1::Float64 = 1.0     #scaling labor disutility (only used in CompMkts part)
     B::Float64 = 5.5      #Supply of Assets: approx. 1.4 times steady state GDP
     μ::Float64 = 1.2      #Markup
     θ::Float64 = 0.15     #Probability that Calvo fairy visits
@@ -33,7 +34,7 @@ end
 """ 
 A structure that saves the steady state of the model.
 """
-struct steady_state
+mutable struct steady_state
  c_policies::Array{Float64}  #policy functions
  D::Array{Float64,1}         #invariant distribution over income/wealth types
  Y::Float64                  #Aggregate output
@@ -50,7 +51,7 @@ end
 """
 A structure that stores the full model transition
 """
-struct transition_full
+mutable struct transition_full
 S::Array{Float64,1}         #price dispersion
 w::Array{Float64,1}         #wages
 pΠ::Array{Float64,1}        #reset inflation
@@ -137,6 +138,7 @@ Function to construct the parameter structure.
 function set_parameters( ; β::Float64 = 0.986,    #discount factor
                            γ::Float64 = 2.0,       #Risk aversion
                            ψ::Float64 = 2.0,      #inverse Frisch elasticity
+                           ψ1::Float64 = 1.0,     #labor disutility scaling (only in complete markets)
                            B::Float64 = 5.5,      #Supply of Assets: 1.4 times annual GDP = 5.6 times quarterly GDP
                            μ::Float64 = 1.2,      #Markup
                            θ::Float64 = 0.15,     #Probability that Calvo fairy visits
@@ -166,7 +168,7 @@ function set_parameters( ; β::Float64 = 0.986,    #discount factor
 
  b_grid = logspaceshift(x_min,a_max,nb,logshift)
 
- return params(β,γ,ψ,B,μ,θ,Rbar,nz,z,Πz,Γ,tax_weights.*z,a_min,a_max,nk,nb,k_grid,b_grid)
+ return params(β,γ,ψ,ψ1,B,μ,θ,Rbar,nz,z,Πz,Γ,tax_weights.*z,a_min,a_max,nk,nb,k_grid,b_grid)
 
 end
 

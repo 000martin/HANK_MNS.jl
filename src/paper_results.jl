@@ -25,7 +25,7 @@ function get_table_2(;Horizon::Int=20,T::Int=200,RChange::Float64 = -0.005)
  for case = 1:4
 
     #adjust guess for β range and range of asset grid depending on case
-    if B[case] == 15.15
+    if Bs[case] == 15.15
     βmin = 0.97 ;  βmax = 0.995 ; a_max = 110.0 
     else
     βmin = 0.95 ;  βmax = 0.99 ; a_max = 75.0

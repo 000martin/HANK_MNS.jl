@@ -126,7 +126,7 @@ Function to construct the parameter structure.
 function set_parameters( ; β::Float64 = 0.986,    #discount factor
                            γ::Float64 = 2.0,       #Risk aversion
                            ψ::Float64 = 2.0,      #inverse Frisch elasticity
-                           ψ1::Float64 = 1.0,
+                           ψ1::Float64 = 1.0,     #labor disutility scaling (only in complete markets)
                            B::Float64 = 5.5,      #Supply of Assets: 1.4 times annual GDP = 5.6 times quarterly GDP
                            μ::Float64 = 1.2,      #Markup
                            θ::Float64 = 0.15,     #Probability that Calvo fairy visits

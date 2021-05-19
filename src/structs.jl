@@ -64,7 +64,7 @@ end
 """
 A structure that stores the complete markets transition
 """
-struct transition_complete_markets
+struct transition_CompMkts
 S::Array{Float64,1}         #price dispersion
 w::Array{Float64,1}         #wages
 pΠ::Array{Float64,1}        #reset inflation

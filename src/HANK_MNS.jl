@@ -14,7 +14,7 @@ include("transition_full.jl")
 export get_transition_full, solve_for_transition
 
 include("complete_markets.jl")
-export  complete_markets, transition_complete_markets
+export  get_transition_CompMkts, solve_for_transition_CompMkts
 
 include("paper_results.jl")
 export get_table_2

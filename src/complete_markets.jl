@@ -1,24 +1,23 @@
 using LinearAlgebra
 
 """
-   complete_markets()
+    get_transition_CompMkts()
 
+Solves for the complete markets transition path.
+Inputs: TR (time until single-quarter interest rate change), T (time horizon transition path), (Change of R at time TR))
 """
 
-function complete_markets()
+function get_transition_CompMkts(TR::Int, T::Int, p::params; RChange::Float64 = -0.005)
     
-    p = set_parameters()
-
     # Update struct for representative agent case
-    p.ψ = 1
-    p.ψ = dot(p.Γ, p.z.^(1.5)) 
+    p.ψ1 = p.ψ1 * dot(p.Γ, p.z.^(1+1/p.ψ))
     p.β = 1/p.Rbar
     
     # Solve for steady state
     A = 1
     ppi = 1
     wage = 1/p.μ
-    Y = (wage/p.ψ)^(1/(p.γ + 2))
+    Y = (wage/p.ψ1)^(1/(p.γ + p.ψ))
     R = 1/p.β
     C = Y
     S = 1
@@ -40,9 +39,6 @@ function complete_markets()
     ind_R = 1; ind_A = 2; ind_S = 3; ind_wage = 4; ind_dividend = 5; ind_ppi = 6; ind_Y = 7; ind_C = 8; 
     ind_N = 9; ind_L = 10; ind_pbarB = 11; ind_pbarA = 12; ind_pstar = 13
     
-    # Solve for transition
-    T = 200
-
     # Initial guesses
     w = 1/p.μ
     R = p.Rbar
@@ -52,29 +48,20 @@ function complete_markets()
     
     # Policy
     Rpath =  fill(R,1,T)
-    HORIZ = 20
-    Rpath[HORIZ+2] = 1   
+    Rpath[TR+1] =  R + RChange
     
-    eqm = transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst, name, p::params)
+    tp = solve_for_transition_CompMkts(Rpath, wagepath, dividendpath, Spath, stst, name, p::params)
 
-    Spath = vec(Spath)
-    wagepath = vec(wagepath)
-    Rpath = vec(Rpath)
-    dividendpath = vec(dividendpath)
-    Ypath = eqm[ind_Y,2:T-1]./stst[ind_Y].-1
-    pΠpath = eqm[ind_ppi,2:T-1].-1
-
-   return  transition_complete_markets(Spath,wagepath,pΠpath,Ypath,Rpath,dividendpath)
-
+    return tp
 end
 
 
 """
-   transition_complete_markets()
+   solve_for_transition_CompMkts()
 
 """
 
-function transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst, name, p::params)
+function solve_for_transition_CompMkts(Rpath, wagepath, dividendpath, Spath, stst, name, p::params)
     
     nvar = length(name)
 
@@ -144,4 +131,12 @@ function transition_complete_markets(Rpath, wagepath, dividendpath, Spath, stst,
     X[ind_wage,:] = wagepath
     eqm = X
 
+    Spath = vec(Spath)
+    wagepath = vec(wagepath)
+    Rpath = vec(Rpath)
+    dividendpath = vec(dividendpath)
+    Ypath = eqm[ind_Y,2:T-1]./stst[ind_Y].-1
+    pΠpath = eqm[ind_ppi,2:T-1].-1
+
+    return transition_CompMkts(Spath,wagepath,pΠpath,Ypath,Rpath,dividendpath)
 end

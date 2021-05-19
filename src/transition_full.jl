@@ -8,12 +8,12 @@ using Plots
 Solves for a steady state and a transition path.
 Inputs: TR (time until single-quarter interest rate change), T (time horizon transition path), RChange (Change of R at time TR)
 """   
-function get_transition_full(TR::Int,T::Int,p::params,SS::steady_state; RChange::Float64 = -0.005)
+function get_transition_full(TR::Int64,T::Int64,p::params,SS::steady_state; RChange::Float64 = -0.005)
 
     @unpack Rbar = p
 
     #generate R path
-    Rpath = repeat([Rbar],T); Rpath[TR+1] = Rbar + RChange
+    Rpath = repeat([Rbar],T); Rpath[TR+2] = Rbar + RChange
     
     #make guess for paths: just steady state state_values for entire transition periods
     wpath = repeat([SS.w],T) ; div_path = repeat([SS.div],T) 
@@ -77,15 +77,15 @@ function solve_for_transition(Rpath::Array{Float64,1},wguess::Array{Float64,1},d
 
     #update wage and dividend paths
     oldwage = wpath[:]
-    wpath[1:T-1] = wpath[1:T-1].*(Npath[1:T-1]./Lpath[1:T-1]).^ψ
+    wpath[2:T-1] = wpath[2:T-1].*(Npath[2:T-1]./Lpath[2:T-1]).^ψ
     
     #same update rule as in MNS
-    wpath[1:T-1] = 0.25*wpath[1:T-1] .+ 0.75*oldwage[1:T-1]
+    wpath[2:T-1] = 0.25*wpath[2:T-1] .+ 0.75*oldwage[2:T-1]
 
-    div_path[1:T-1] = Ypath[1:T-1] .- wpath[1:T-1].*Npath[1:T-1]
+    div_path[2:T-1] = Ypath[2:T-1] .- wpath[2:T-1].*Npath[2:T-1]
 
     #calculate distance
-    distW = maximum(abs.(wpath[1:T-1]./oldwage[1:T-1] .- 1.0))
+    distW = maximum(abs.(wpath[2:T-1]./oldwage[2:T-1] .- 1.0))
 
     println("Current W distance: ", distW," Current wage iteration: ",iterW)
     iterW = iterW + 1
@@ -95,11 +95,11 @@ function solve_for_transition(Rpath::Array{Float64,1},wguess::Array{Float64,1},d
     pbarA = μ*SS.w*SS.Y / (1-β*(1-θ)) ; pbarB = SS.Y/(1-β*(1-θ))
 
     #pre-allocate
-    pΠpath = ones(T) ; pstar = ones(T-1) 
+    pΠpath = ones(T) ; pstar = ones(T) 
 
     #solve backwards for pbarA, pbarB and reset inflation
-    for t = T-1:-1:1
-        pbarA = μ*wpath[t]*Ypath[t] + β*(1-θ)*(pΠpath[t+1]^(μ/(μ-1)))*pbarA
+    for t = T-1:-1:2
+        pbarA = μ*wpath[1+t]*Ypath[t] + β*(1-θ)*(pΠpath[t+1]^(μ/(μ-1)))*pbarA
         pbarB = Ypath[t] + β*(1-θ)*(pΠpath[t+1]^(1/(μ-1)))*pbarB
         pstar[t] = pbarA/pbarB
         pΠpath[t] = ((1-θ)/(1-θ*pstar[t]^(1/(1-μ))))^(1-μ)
@@ -108,7 +108,7 @@ function solve_for_transition(Rpath::Array{Float64,1},wguess::Array{Float64,1},d
     oldS = Spath ; Spath = ones(T)
     Slast = 1.0 #steady state price dispersion
     #solve for S path
-    for t = 1:T-1
+    for t = 2:T-1
         Spath[t] = (1-θ)*Slast*pΠpath[t]^(μ/(μ-1)) + θ*pstar[t]^(μ/(1-μ))
         Slast = Spath[t]
     end
@@ -121,7 +121,7 @@ function solve_for_transition(Rpath::Array{Float64,1},wguess::Array{Float64,1},d
     iterS = iterS + 1
  end
 
- return transition_full(Spath,wpath,pΠpath,Ypath,Rpath,τ_path,div_path)
+ return transition_full(Spath[2:T-1],wpath[2:T-1],pΠpath[2:T-1],Ypath[2:T-1],Rpath[2:T-1],τ_path[2:T-1],div_path[2:T-1])
 
 end
 
@@ -145,9 +145,9 @@ function simulate_forward(D0::Array{Float64,1},cpol_path::Array{Float64,2},Rpath
  Cpath = Array{Float64,1}(undef,T-1);  Lpath = Array{Float64,1}(undef,T-1)
  Bpath = Array{Float64,1}(undef,T-1)  
  Dpath = Array{Float64,2}(undef,p.nz*p.nk,T)
- Dpath[:,1] .= D0 
+ Dpath[:,2] .= D0 
 
- for t = 1:T-1
+ for t = 2:T-1
 
  #simulate forward
   cpols = reshape_c(cpol_path[:,t],p)

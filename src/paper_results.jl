@@ -81,7 +81,6 @@ Returns a TypedTable.jl table containing the results.
 Baseline case: Interest rate change 20 periods ahead (Horizon), complete transition period length T=200, 
 one time interest rate change (RChange) of 50 basis points
 """
-
 function get_table_2(;Horizon::Int=20,T::Int=200,RChange::Float64 = -0.005)
 
  #arrays for results

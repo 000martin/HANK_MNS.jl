@@ -11,8 +11,6 @@ Finds the steady state for given interest rate by iterating over β, using a sim
 I typically used Y = 0.6 as guess for Y and beta_Range = [0.95,0.99] for the baseline calibration and [0.97,0.995] 
 for the high asset calibration, which works fine. Y_guess not particularly important, I use the same as MNS.
 """
-
-#find steady state equilibrium using different method
 function get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64,1};
                            tolβ::Float64 = 1e-6, tolY::Float64=1e-6  )
 
@@ -84,9 +82,9 @@ end
 
 
 """
-    check_steady_state(β::Float64,Y::Float64,p::params)
+    check_steady_state(β::Float64,Y::Float64,p::params,return_distance::Bool=false)
 
-For given β,Y and Parameters, this function computes consumption and labor suppy 
+For given β, Y and parameters, this function computes consumption and labor suppy 
 as implied by the household decisions and returns the distance between output 
 implied by labor and output implied by consumption as well as the distance between household
 asset choices and the asset target. It can be used in an Root-Finding algorithm to find the β
@@ -138,7 +136,8 @@ end
 
 
 """
-    EGM_SS(c_guess::Array{Float64,2}, β::Float64,Y::Float64, p::params; T::Int=30, maxit::Int = 500, tol::Float64 = 1e-7)
+    EGM_SS(c_guess::Array{Float64,2}, β::Float64,Y::Float64, p::params; T::Int=30, 
+           maxit::Int = 500, tol::Float64 = 1e-7)
 
 Computes household steady state (SS) consumption using the endogenous grid method (EGM).
 """
@@ -170,14 +169,14 @@ end
 
 
 """
-    solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},τ_path::Array{Float64},div_path::Array{Float64,1},β::Float64,p::params) 
+    solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},
+              τ_path::Array{Float64},div_path::Array{Float64,1},β::Float64,p::params) 
 
 Solves backwards from a period (e.g. steady state) in which decision rules are known
 and given price/dividend paths. Relies on function EGM.
 (at the moment, this still omits β-heterogeneity).
 In w_path,τ_path etc., the final values must correspond to the period to solve back from.
 """
-
 function solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},τ_path::Array{Float64},
                     div_path::Array{Float64,1},β::Float64,p::params) 
 
@@ -225,7 +224,8 @@ end
 
 
 """
-    get_cnbp(xthis::Array{Float64},c::Array{Float64},R::Float64,w::Float64,τ::Float64,p::params,inc_idx::Int)
+    get_cnbp(xthis::Array{Float64},c::Array{Float64},R::Float64,w::Float64,
+             τ::Float64,p::params,inc_idx::Int)
 
 Helper function that, given the HH policy function and factor prices, taxes, etc.,
 interpolates the HH policy function to the values in xthis and computes
@@ -248,7 +248,8 @@ w::Float64,τ::Float64,div::Float64,inc_idx::Int64,p::params)
 end
 
 """
-    EGM(β::Float64,...)
+    EGM(c_next::Array{Float64,2},β::Float64, Rs::Array{Float64,1}, ws::Array{Float64,1},
+    τs::Array{Float64,1}, div::Array{Float64,1},p::params)
 
 Conducts one iteration on consumption and labor supply using the endogenous grid method (EGM).
 Inputs need to be 2x1 arrays of wage, interest, etc. in current and previous period.
@@ -309,7 +310,8 @@ end
 
 
 """
-    egm_solve_constrained()
+    egm_solve_constrained(bs::Array{Float64,1},ip::Int,w::Float64,τ::Float64,
+                          div::Float64,R::Float64,p::params)
 
 Backs out consumption level of constrained household.
 """
@@ -351,7 +353,6 @@ end
 Generates a transition matrix for the aggregate wealth distribution. Uses the helper function lineartrans() as 
 in the original code.
 """
-
 function forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64, par::params)
 
    @unpack nk, nz, k_grid, Πz = par
@@ -440,7 +441,6 @@ end
 
 Helper function for lineartrans. Finds the next lower asset point on the grid for savings choice x.
 """
-
 function find_closest_lower(x::Float64,grid::Array{Float64,1})
    return findlast(y -> y <= x, grid)
 end
@@ -462,7 +462,8 @@ end
 
 
 """
-    aggregate_C_L(D::Array{Float64,1}, c_policies::Array{Float64,1}, R::Float64, w::Float64, τ::Float64, div::Float64)
+    aggregate_C_L(D::Array{Float64,1}, c_policies::Array{Float64,1}, R::Float64, 
+                  w::Float64, τ::Float64, div::Float64)
 
 Computes aggregate consumption and labor supply of the household sector. Equivalent to expect_C in the MNS code.
 """

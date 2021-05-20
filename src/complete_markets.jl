@@ -1,10 +1,11 @@
 using LinearAlgebra
 
 """
-    get_transition_CompMkts()
+    get_transition_CompMkts(TR::Int, T::Int, p::params; RChange::Float64 = -0.005)
 
 Solves for the complete markets transition path.
-Inputs: TR (time until single-quarter interest rate change), T (time horizon transition path), (Change of R at time TR))
+Inputs: TR (time until single-quarter interest rate change), T (time horizon transition path), 
+(Change of R at time TR))
 """
 
 function get_transition_CompMkts(TR::Int, T::Int, p::params; RChange::Float64 = -0.005)
@@ -57,10 +58,10 @@ end
 
 
 """
-   solve_for_transition_CompMkts()
+    solve_for_transition_CompMkts(Rpath, wagepath, dividendpath, Spath, stst, name, p::params)
 
+Solves for the complete markets transition path for a given interest rate path, wpage path, dividend path, etc. 
 """
-
 function solve_for_transition_CompMkts(Rpath, wagepath, dividendpath, Spath, stst, name, p::params)
     
     nvar = length(name)

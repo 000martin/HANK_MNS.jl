@@ -8,7 +8,6 @@ using Parameters, Roots, QuantEcon, Statistics
 """
     A structure that stores the parameter vector of the model.
 """
-
  @with_kw mutable struct  params
     β::Float64 = 0.986    #discount factor
     γ::Float64 = 2.0      #Risk aversion
@@ -81,7 +80,6 @@ end
 
 A function involved in making the grids. Several methods available.
 """
-
 function logspaceshift(xa::Float64,xb::Float64,n::Int,x2::Float64,n_at_x2::Float64)
     frac = n_at_x2 / n
 
@@ -115,7 +113,7 @@ end
 
 
 """
-    makeknotd(kmin::Float64,kmax::Float64, n::Int, logshift::Float64)
+    makeknotd(kmin::Float64,kmax::Float64,n::Int,logshift::Float64)
 
 A Function involved in generating the household asset grid. Several methods available.
 """
@@ -134,23 +132,23 @@ end
 
 
 """
-    set_parameters( ; β::Float64 = 0.986,    #discount factor
-                      γ::Float64 = 2.0,       #Risk aversion
-                      ψ::Float64 = 2.0,      #inverse Frisch elasticity
-                      ψ1::Float64 = 1.0,     #labor disutility scaling (only in complete markets)
-                      B::Float64 = 5.5,      #Supply of Assets: 1.4 times annual GDP = 5.6 times quarterly GDP
-                      μ::Float64 = 1.2,      #Markup
-                      θ::Float64 = 0.15,     #Probability that Calvo fairy visits
-                      Rbar::Float64 = 1.005, #Target quarterly interest rate
-                      nz::Int64 = 3,           #Number of income grid states
-                      ρ::Float64 = 0.96566,            #persistence parameter income process
-                      σ::Float64 = 0.01695^0.5,          #Std of income process random comp.
-                      tax_weights::Array{Float64,1} = [0.0,0.0,1.0],   #tax weights
-                      a_min::Float64  = 0.0,            #borrowing constraint
-                      a_max::Float64 =75.0,             #maximum asset holdings in grid
-                      x_min::Float64 = 0.001,          #parameter to generate the consumption knots
-                      nk::Int64 = 1000,                  #number of grid points used for quadrature grid
-                      nb::Int64 = 200)
+    set_parameters(;β::Float64 = 0.986,    # Discount factor
+                    γ::Float64 = 2.0,      # Risk aversion
+                    ψ::Float64 = 2.0,      # Inverse Frisch elasticity
+                    ψ1::Float64 = 1.0,     # Labor disutility scaling (only in complete markets)
+                    B::Float64 = 5.5,      # Supply of Assets: 1.4 times annual GDP = 5.6 times quarterly GDP
+                    μ::Float64 = 1.2,      # Mark-up
+                    θ::Float64 = 0.15,     # Probability that Calvo fairy visits
+                    Rbar::Float64 = 1.005, # Target quarterly interest rate
+                    nz::Int64 = 3,         # Number of income grid states
+                    ρ::Float64 = 0.96566,            # Persistence parameter income process
+                    σ::Float64 = 0.01695^0.5,        # Std of income process random comp
+                    tax_weights::Array{Float64,1} = [0.0,0.0,1.0],   # Tax weights
+                    a_min::Float64  = 0.0,           # Borrowing constraint
+                    a_max::Float64 =75.0,            # Maximum asset holdings in grid
+                    x_min::Float64 = 0.001,          # Parameter to generate the consumption knots
+                    nk::Int64 = 1000,                # Number of grid points used for quadrature grid
+                    nb::Int64 = 200)
 
 Function to construct the parameter structure.
 """
@@ -203,7 +201,7 @@ function reshape_c(c::Array{Float64,1},par::params)
  c_wide = reshape(c,(nb,nz))
 
  return c_wide
-
+ 
 end
 
 

@@ -2,8 +2,8 @@ HANK_MNS replication repo
 
 # copied the buttons etc. from the julialang example package, if we decide to create a documentation, will only have to change urls
 
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaLang.github.io/Example.jl/stable)
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaLang.github.io/Example.jl/dev)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://000martin.github.io/HANK_MNS.jl/stable)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://000martin.github.io/HANK_MNS.jl//dev)
 
 GitHub Actions : [![Build Status](https://github.com/JuliaLang/Example.jl/workflows/CI/badge.svg)](https://github.com/JuliaLang/Example.jl/actions?query=workflow%3ACI+branch%3Amaster)
 

@@ -134,7 +134,23 @@ end
 
 
 """
-    set_parameters()
+    set_parameters( ; β::Float64 = 0.986,    #discount factor
+                      γ::Float64 = 2.0,       #Risk aversion
+                      ψ::Float64 = 2.0,      #inverse Frisch elasticity
+                      ψ1::Float64 = 1.0,     #labor disutility scaling (only in complete markets)
+                      B::Float64 = 5.5,      #Supply of Assets: 1.4 times annual GDP = 5.6 times quarterly GDP
+                      μ::Float64 = 1.2,      #Markup
+                      θ::Float64 = 0.15,     #Probability that Calvo fairy visits
+                      Rbar::Float64 = 1.005, #Target quarterly interest rate
+                      nz::Int64 = 3,           #Number of income grid states
+                      ρ::Float64 = 0.96566,            #persistence parameter income process
+                      σ::Float64 = 0.01695^0.5,          #Std of income process random comp.
+                      tax_weights::Array{Float64,1} = [0.0,0.0,1.0],   #tax weights
+                      a_min::Float64  = 0.0,            #borrowing constraint
+                      a_max::Float64 =75.0,             #maximum asset holdings in grid
+                      x_min::Float64 = 0.001,          #parameter to generate the consumption knots
+                      nk::Int64 = 1000,                  #number of grid points used for quadrature grid
+                      nb::Int64 = 200)
 
 Function to construct the parameter structure.
 """
@@ -177,7 +193,7 @@ end
 
 
 """
-    reshape_c(c::Array{Float64},p)
+    reshape_c(c::Array{Float64},p::params)
 
 Helper function with two methods to replace par2wide and par2long from the MNS code.
 """

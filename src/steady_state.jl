@@ -5,7 +5,7 @@
 using Interpolations, SparseArrays, LinearAlgebra, NLsolve
 
 """
-    get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64,1};tolβ::Float64 = 1e-6, tolY::Float64=1e-6  )
+    get_steady_state(p::params,Y_guess::Float64,beta_Range::Array{Float64,1};tolβ::Float64=1e-6,tolY::Float64=1e-6)
 
 Finds the steady state for given interest rate by iterating over β, using a simple bisection type updating algorithm.
 I typically used Y = 0.6 as guess for Y and beta_Range = [0.95,0.99] for the baseline calibration and [0.97,0.995] 

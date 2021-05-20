@@ -28,6 +28,7 @@ using Parameters, Roots, QuantEcon, Statistics
     ..* The number of points on the asset grid used for computing HH policy functions `nb` 
     ..* The asset grid used for computing the wealth distribution `k_grid`
     ..* The asset grid used for computing the HH policy functions `b_grid`
+
 """
  @with_kw mutable struct  params
     β::Float64 = 0.986    #discount factor
@@ -57,6 +58,7 @@ end
     It contains the household policy functions (`c_polcicies`), the invariant distribution of wealth (`D`),
     output (`Y`), consumption (`C`), hours worked (`L`), aggregate assets (`K`), the wage (`w`), the tax rate (`τ`),
     the dividebd (`div`) and the interest rate (`Rbar`). Note that `C`, `L` and `Y` should be equal (approximately).
+    
 """
 mutable struct steady_state
  c_policies::Array{Float64}  #policy functions

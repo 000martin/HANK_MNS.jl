@@ -45,7 +45,7 @@ In case one wants to produce a transition path with a custom calibration using t
 using HANK_MNS
 
 #Example: choose a higher aggregate asset level and higher income risk
-p = set_parameters(B = 7.8, &sigma; = 0.03^0.5)
+p = set_parameters(B = 7.8, σ = 0.03^0.5)
 
 #Find the \beta consistent with the target interest rate and asset level in steady state
 #and obtain a corresponding steady state structure SS.
@@ -54,7 +54,7 @@ p = set_parameters(B = 7.8, &sigma; = 0.03^0.5)
 b, y, SS = get_steady_state(p,0.9,[0.95,0.99])
 
 #set the correct \beta value
-p.&beta; = b
+p.β = b
 
 #obtain the transition path for the announcemnt of a 22 quarter ahead interest rate reduction of 60 basis points.
 trp = get_transition_full(;TR = 22, RChange = -0.006)
@@ -63,7 +63,7 @@ trp = get_transition_full(;TR = 22, RChange = -0.006)
 #Make a table, plot it,...
 ```
 
-
+## Function documentation
 
 ```@autodocs
 Modules = [HANK_MNS]

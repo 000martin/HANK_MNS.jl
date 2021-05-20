@@ -6,7 +6,29 @@ using Parameters, Roots, QuantEcon, Statistics
 # File that provides structures used throughout the code as well as functions to fill them
 
 """
-    A structure that stores the parameter vector of the model.
+    A structure that stores the parameter vector of the model, including all grids.
+    It can be automatically generayed using function `set_parameters()`.
+    It contains the following elements: 
+    ..* The discount factor `β` 
+    ..* The CRRA risk aversion parameter `γ` 
+    ..* Yhe inverse Frisch elasticity `ψ`
+    ..* The labor disutility scaling parameter `ψ1` (only used in complete markets case)
+    ..* The target asset level `B`
+    ..* The markup/CES production function parameter `μ`
+    ..* The Calvo price re-set probability `θ`
+    ..* The target interest rate `Rbar`
+    ..* The number of grid points on the labor productivity grid `nz`
+    ..* The labor productivity grid `z`
+    ..* The labor productivity state Markov transition matrix `Πz`
+    ..* The invariant distribution over labor productivty states `Γ`
+    ..* The tax weights `tax_weights`
+    ..* The borrowing constraint `a_min`
+    ..* The maximum value on the asset grid `a_max`
+    ..* The number of points on the asset grid used for computing the wealth distribution `nk` 
+    ..* The number of points on the asset grid used for computing HH policy functions `nb` 
+    ..* The asset grid used for computing the wealth distribution `k_grid`
+    ..* The asset grid used for computing the HH policy functions `b_grid`
+
 """
  @with_kw mutable struct  params
     β::Float64 = 0.986    #discount factor
@@ -32,7 +54,11 @@ end
 
 
 """ 
-    A structure that saves the steady state of the model.
+    A structure that saves the steady state of the incomplete markets model.
+    It contains the household policy functions (`c_polcicies`), the invariant distribution of wealth (`D`),
+    output (`Y`), consumption (`C`), hours worked (`L`), aggregate assets (`K`), the wage (`w`), the tax rate (`τ`),
+    the dividebd (`div`) and the interest rate (`Rbar`). Note that `C`, `L` and `Y` should be equal (approximately).
+    
 """
 mutable struct steady_state
  c_policies::Array{Float64}  #policy functions
@@ -49,7 +75,8 @@ end
 
 
 """
-    A structure that stores the full model transition.
+    A structure that stores the incomplete markets model transition path, including the time paths of price dispersion (`S`), the wage (`w`),
+    inflation (`pΠ`), output (`Y`), the interest rate (`R`), the tax rate (`τ`) and the dividend (`div`).
 """
 mutable struct transition_full
 S::Array{Float64,1}         #price dispersion
@@ -63,7 +90,8 @@ end
 
 
 """
-    A structure that stores the complete markets transition.
+    A structure that stores the complete markets transition path, including the time paths of price dispersion (`S`), the wage (`w`),
+    inflation (`pΠ`), output (`Y`), the interest rate (`R`),  and the dividend (`div`).
 """
 struct transition_CompMkts
 S::Array{Float64,1}         #price dispersion
@@ -78,7 +106,7 @@ end
 """
     logspaceshift(xa::Float64,xb::Float64,n::Int,x2::Float64,n_at_x2::Float64)
 
-A function involved in making the grids. Several methods available.
+A function involved in replicating a log-spaced asset grids exactly as in the MNS code. Several methdos available.
 """
 function logspaceshift(xa::Float64,xb::Float64,n::Int,x2::Float64,n_at_x2::Float64)
     frac = n_at_x2 / n
@@ -93,6 +121,12 @@ function logspaceshift(xa::Float64,xb::Float64,n::Int,x2::Float64,n_at_x2::Float
  
 end
 
+"""
+    logspaceshift(xa::Float64,xb::Float64,n::Int,x2::Float64)
+
+A function involved in replicating a log-spaced asset grids exactly as in the MNS code. Several methdos available.
+This is one of them.
+"""
 function logspaceshift(xa::Float64,xb::Float64,n::Int,x2::Float64)
 
     xshift = x2
@@ -102,6 +136,13 @@ function logspaceshift(xa::Float64,xb::Float64,n::Int,x2::Float64)
     return grid
 end
 
+
+"""
+    logspaceshift(xa::Float64,xb::Float64,n::Int)
+
+A function involved in replicating a log-spaced asset grids exactly as in the MNS code. Several methdos available.
+This is one of them.
+"""
 function logspaceshift(xa::Float64,xb::Float64,n::Int)
 
     xshift = 0.0
@@ -115,7 +156,7 @@ end
 """
     makeknotd(kmin::Float64,kmax::Float64,n::Int,logshift::Float64)
 
-A Function involved in generating the household asset grid. Several methods available.
+A Function that produces an asset grid using the function `logspaceshift`. Several methods available. This is one of them.
 """
 function makeknotd(kmin::Float64,kmax::Float64, n::Int, logshift::Float64)
 
@@ -124,6 +165,11 @@ function makeknotd(kmin::Float64,kmax::Float64, n::Int, logshift::Float64)
     
 end 
 
+"""
+    makeknotd(kmin::Float64,kmax::Float64,n::Int,logshift::Float64)
+
+A Function that produces an asset grid using the function `logspaceshift`. Several methods available. This os one of them.
+"""
 function makeknotd(kmin::Float64,kmax::Float64, n::Int)
 
     knots,logshift = logspaceshift(kmin,kmax,n,1.0,n/4)
@@ -150,7 +196,13 @@ end
                     nk::Int64 = 1000,                # Number of grid points used for quadrature grid
                     nb::Int64 = 200)
 
-Function to construct the parameter structure.
+Function to construct the parameter structure. The default parameters correspond to the baseline calibration from the MNS paper.
+The function applies the Rouwenhorst method (using its `QuantEcon` implementation) to discretize the AR(1) process for (log) labor productivity
+with persistence ρ and innovation variance σ.    
+Note that while `\beta` is set automatically, it will typically be replaced after the steady state is computed, since
+β is numerically computed to match a target interest rate and aggregate asset level.
+
+To generate the asset grids, the functions `makeknotd` and `logspaceshift` are used.
 """
 function set_parameters( ; β::Float64 = 0.986,    #discount factor
                            γ::Float64 = 2.0,       #Risk aversion
@@ -193,7 +245,8 @@ end
 """
     reshape_c(c::Array{Float64},p::params)
 
-Helper function with two methods to replace par2wide and par2long from the MNS code.
+Helper functions that gets the HH consumption policy functions into a different form. If they are supplied as a `nb*nz` matrix, they 
+will be turned into a vector of length `nb+nz` and vice versa. This is the method doing the latter.
 """
 function reshape_c(c::Array{Float64,1},par::params)
  @unpack nb,nz = par
@@ -204,7 +257,12 @@ function reshape_c(c::Array{Float64,1},par::params)
  
 end
 
+"""
+    reshape_c(c::Array{Float64,2},par::params)
 
+Helper functions that gets the HH consumption policy functions into a different form. If they are supplied as a `nb*nz` matrix, they 
+will be turned into a vector of length `nb+nz` and vice versa. This is the method doing the former.
+"""
 function reshape_c(c::Array{Float64,2},par::params)
  @unpack nb,nz = par
 

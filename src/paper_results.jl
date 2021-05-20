@@ -4,7 +4,12 @@ using TypedTables, Plots
 """
     get_figures_3_4(;TR::Int64 = 20, T::Int64 = 200, RChange::Float64 = -0.005)
 
-Function that replicates Figures 3 and 4 from the MNS paper.
+Convenience function that replicates Figures 3 and 4 from the MNS paper.
+
+Just running `get_figures_3_4()` will display equivalents to Figures 3 and 4 in the MNS paper.
+
+The function relies on `set_parameters`, `get_steady_state`, `get_transition_full` and `get_transition_CompMkts`.
+
 Optional argument: Time horizon of interest rate change (TR). Size of interest rate change (RChange)
 """
 function get_figures_3_4(;TR::Int64 = 20, T::Int64 = 200, RChange::Float64 = -0.005)
@@ -23,18 +28,38 @@ println("Solving for transition path")
 println("")
 tp = get_transition_full(TR,T,p,SS; RChange=RChange)
 
-p1 = plot(0:2*TR-1,tp.Y[1:2*TR]./SS.Y .- 1.0, title="Figure 3: Output response",xlabel = "Quarter", ylabel = "Output")  
-#plot!([TR+1],seriestype = "vline", label = "Time of Rate Change")
-p2 = plot(0:2*TR-1,tp.pΠ[1:2*TR] .- 1.0,title = "Figure 4: Inflation Response",xlabel = "Quarter", ylabel = "Inflation")
-#plot!([TR+1],seriestype = "vline", label = "Time of Rate Change")
-plot(p1,p2, layout = (2,1), legend = false)
+println("")
+println("Solving for complete markets transition path")
+println("")
+
+tpc = get_transition_CompMkts(TR,T,p; RChange=RChange)
+
+p1 = plot(0:2*TR-1,(tp.Y[1:2*TR]./SS.Y .- 1.0)*100.0, title="Figure 3: Output response",xlabel = "Quarter", ylabel = "Output",
+        label = "Incomplete Markets")  
+plot!(0:2*TR-1,tpc.Y[1:2*TR]*100.0,label = ["Complete Markets"] )
+
+p2 = plot(0:2*TR-1,(tp.pΠ[1:2*TR] .- 1.0)*100.0,title = "Figure 4: Inflation Response",xlabel = "Quarter", ylabel = "Inflation",
+        label = "Incomplete Markets")
+plot!(0:2*TR-1,tpc.pΠ[1:2*TR]*100.0,label = ["Complete Markets"] )
+
+return plot(p1,p2, layout = (2,1))
 end
 
 """
     get_figures_5_6(; Horizon::StepRange{Int64,Int64} = 1:2:41, T::Int64 = 200, RChange::Float64 = -0.005)
 
-Function to replicate Figures 5 and 6 from the MNS paper.
-WARNING: Running this takes quite long, as a large number of transition paths are computed
+Convenience function that replicates Figures 5 and 6 from the MNS paper.
+
+Just running `get_figures_5_6()` will display equivalents to Figures 5 and 6 in the MNS paper.
+
+The function relies on `set_parameters`, `get_steady_state`, `get_transition_full` and `get_transition_CompMkts`.
+        
+Optional argument: 
+..* Horizons of interest rate changes to consider (`Horizon`), to be supplied as `StepRange`.
+..* Total length of transition period to compute (`T`), i.e. assuming that after T periods economy will be back in SS
+..* Size of interest rate change (RChange).
+
+All default values corresppond to the values used by MNS.
 """
 function get_figures_5_6(; Horizon::StepRange{Int64,Int64} = 1:2:41, T::Int64 = 200, RChange::Float64 = -0.005)
 
@@ -42,6 +67,7 @@ function get_figures_5_6(; Horizon::StepRange{Int64,Int64} = 1:2:41, T::Int64 = 
 
     #pre-allocate vectors for results
     Y_response = Array{Float64,1}(undef,length(TRs)); Π_response = Array{Float64,1}(undef,length(TRs))
+    Y_response_CM = Array{Float64,1}(undef,length(TRs)); Π_response_CM = Array{Float64,1}(undef,length(TRs))
 
     #get initial steady state
     p = set_parameters()
@@ -50,6 +76,7 @@ function get_figures_5_6(; Horizon::StepRange{Int64,Int64} = 1:2:41, T::Int64 = 
 
 
     for horiz = 1:length(TRs)
+
 
     println("")
     println("Solving for transition path with horizon ",TRs[horiz])
@@ -61,32 +88,54 @@ function get_figures_5_6(; Horizon::StepRange{Int64,Int64} = 1:2:41, T::Int64 = 
     Π_response[horiz] = tr.pΠ[1]
     
     println("")
-    println("Initial Output response: ",tr.Y[1]/SS.Y - 1.0,"Initial Inflation response: ",tr.pΠ[1]-1.0)
+    println("Initial Output response: ",tr.Y[1]/SS.Y - 1.0," Initial Inflation response: ",tr.pΠ[1]-1.0)
     println("")
+
+    trc = get_transition_CompMkts(TRs[horiz],T,p; RChange=RChange)
+
+    Y_response_CM[horiz] = trc.Y[1]
+    Π_response_CM[horiz] = trc.pΠ[1]
+
+    p = set_parameters(β = b,ψ1 = 1.0) #ensure par structure is stable
 
     end
 
-    p1 = plot(Horizon, Y_response/SS.Y .- 1.0, title="Figure 5: Initial Output response",xlabel = "Horizon rate change", ylabel = "Output")  
-    #plot!([TR+1],seriestype = "vline", label = "Time of Rate Change")
-    p2 = plot(Horizon,Π_response .- 1.0,title = "Figure 6: Initial Inflation response",xlabel = "Horizon rate change", ylabel = "Inflation")
-    #plot!([TR+1],seriestype = "vline", label = "Time of Rate Change")
-    plot(p1,p2, layout = (2,1), legend = false)
+    p1 = plot(Horizon, (Y_response/SS.Y .- 1.0)*100.0, title="Figure 5: Initial Output response",xlabel = "Horizon rate change", ylabel = "Output",
+                label = "Incomplete Markets")  
+    plot!(Horizon, Y_response_CM*100.0, label = "Complete Markets")
+    
+    p2 = plot(Horizon,(Π_response .- 1.0)*100.0,title = "Figure 6: Initial Inflation response",xlabel = "Horizon rate change", ylabel = "Inflation",
+                label = "Complete Markets")
+    plot!(Horizon, Π_response_CM*100.0, label = "Complete Markets")
+
+    return plot(p1,p2, layout = (2,1))
 end
 
 """
     get_table_2(;Horizon::Int=20,T::Int=200,RChange::Float64 = -0.005)
 
-Function that generates the results in table 2 from the MNS paper.
-Returns a TypedTable.jl table containing the results.
-Baseline case: Interest rate change 20 periods ahead (Horizon), complete transition period length T=200, 
-one time interest rate change (RChange) of 50 basis points
+Convenience function that replicates Table 2 from the MNS paper.
+
+Just running `get_table_2()` will return an equivalent to Table 2 as a table object.
+
+The function relies on `set_parameters`, `get_steady_state`, `get_transition_full` and `get_transition_CompMkts`.
+        
+Optional argument: 
+..* Time horizon of interest rate change (`TR`)
+..* Total length of transition period to compute (`T`), i.e. assuming that after T periods economy will be back in SS 
+..* Size of interest rate change (`RChange`)
+
+Default values correspond to the values chosen by MNS.
+
+### Note: The returned values will not be identical to the ones obtained by MNS. 
+### However, notice that chosen unit is Basis Points (=0.01 percent), so the actual numerical difference between the MNS solution and ours is small.
 """
 function get_table_2(;Horizon::Int=20,T::Int=200,RChange::Float64 = -0.005)
 
  #arrays for results
- resp_inflation = Array{Float64,1}(undef,4)
- resp_output    = Array{Float64,1}(undef,4)
- cases = ["Baseline","High Risk","High Asset","High Risk and High Asset"]
+ resp_inflation = Array{Float64,1}(undef,5)
+ resp_output    = Array{Float64,1}(undef,5)
+ cases = ["Baseline","High Risk","High Asset","High Risk and High Asset","Complete Markets"]
 
  #output standard deviations for different cases:
  σ2s = [0.01695,0.033,0.01695,0.024]
@@ -126,6 +175,11 @@ function get_table_2(;Horizon::Int=20,T::Int=200,RChange::Float64 = -0.005)
     resp_output[case]    = (tr.Y[1]/SS.Y - 1.0)*10000.0
 
  end
+ 
+ p = set_parameters()
+ tpc = get_transition_CompMkts(Horizon,T,p;RChange = RChange)
+ resp_inflation[5] = tpc.pΠ[1]*10000.0 
+ resp_output[5] = tpc.Y[1]*10000.0
 
  return Table(Case = cases,  initial_output_response = resp_output, initial_inflation_response= resp_inflation)
 

@@ -4,8 +4,9 @@ This is a replication of ["The Power of Forward Guidance"](https://www.aeaweb.or
 
 The project was part of our evaluation for the course [Numerical Methods](https://floswald.github.io/NumericalMethods/) at SciencesPo Paris in Spring 2021. 
 
-In this replication we analyze how sensitive forward guidance is to the assumption of complete markets.
+In this replication, we analyze how sensitive forward guidance is to the assumption of complete markets.
 
+Authors: @mhaense1, @000martin
 
 ```@autodocs
 Modules = [HANK_MNS]

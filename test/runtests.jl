@@ -7,13 +7,13 @@ using Test, HANK_MNS
    
    #sanity check grid
    @test maximum(p.k_grid) == p.a_max
-   @test minimum(p.k_grid) == p.a_max
+   @test minimum(p.k_grid) == p.a_min
 
    #sanity test income grid
    @test minimum(p.z) > 0
 
    #test reshape_c
-   @test reshape_c(ones(p.nb,p.nz),p) == ones(p.nb*p.nz)
+   @test HANK_MNS.reshape_c(ones(p.nb,p.nz),p) == ones(p.nb*p.nz)
    
    #check income state transition process
    @test sum(p.Πz,dims=2) == ones(p.nz,1)
@@ -25,7 +25,7 @@ using Test, HANK_MNS
    @test cs[:,3] == ones(p.nb)
 
    #test transition matrix - rows should sum up to one
-   Pi = forwardmat(cs,1/p.β,1.0,0.0,0.1,p)
+   Pi = HANK_MNS.forwardmat(cs,1/p.β,1.0,0.0,0.1,p)
    @test sum(Pi,dims = 2) ≈ ones(p.nk*p.nz,1)
    #Pi should be square matrix with size nk*nz
    @test size(Pi) == (p.nk*p.nz,p.nk*p.nz) 

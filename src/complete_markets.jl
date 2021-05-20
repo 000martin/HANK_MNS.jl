@@ -88,11 +88,11 @@ function solve_for_transition_CompMkts(Rpath, wagepath, dividendpath, Spath, sts
             X[ind_L,2:T-1] = (wagepath[2:T-1] .* X[ind_C,2:T-1].^(-p.γ) / p.ψ1).^(1/p.ψ)
                 
             # Adjust wage, dividend
-            oldwage = wagepath
+            oldwage = wagepath[:]
             wagepath[2:T-1] = wagepath[2:T-1].*(X[ind_N,2:T-1]./X[ind_L,2:T-1]).^p.ψ
             dividendpath[2:T-1] = (X[ind_Y,2:T-1] - wagepath[2:T-1].*X[ind_N,2:T-1])
          
-            test = findmax(abs.(wagepath./oldwage .- 1))[1]
+            test = maximum(abs.(wagepath[2:T-1]./oldwage[2:T-1] .- 1.0))
             println(string("Residual in wage path: ", test))
             if test < 1e-6 break end
         end

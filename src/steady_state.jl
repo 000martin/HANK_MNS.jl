@@ -1,10 +1,11 @@
-#features functions to calibrate and compute the steady state
+
+
+# Features functions to calibrate and compute the steady state
 
 using Interpolations, SparseArrays, LinearAlgebra, NLsolve
 
 """
-   get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64,1};
-   tolβ::Float64 = 1e-6, tolY::Float64=1e-6  )
+    get_steady_state(p::params, Y_guess::Float64, beta_Range::Array{Float64,1};tolβ::Float64 = 1e-6, tolY::Float64=1e-6  )
 
 Finds the steady state for given interest rate by iterating over β, using a simple bisection type updating algorithm.
 I typically used Y = 0.6 as guess for Y and beta_Range = [0.95,0.99] for the baseline calibration and [0.97,0.995] 
@@ -137,8 +138,7 @@ end
 
 
 """
-   EGM_SS(c_guess::Array{Float64,2},β::Float64,Y::Float64,p::params;
-   T::Int=30, maxit::Int = 500, tol::Float64 = 1e-7)
+    EGM_SS(c_guess::Array{Float64,2}, β::Float64,Y::Float64, p::params; T::Int=30, maxit::Int = 500, tol::Float64 = 1e-7)
 
 Computes household steady state (SS) consumption using the endogenous grid method (EGM).
 """
@@ -170,8 +170,7 @@ end
 
 
 """
-   solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},τ_path::Array{Float64},
-   div_path::Array{Float64,1},β::Float64,p::params) 
+    solveback(c_final::Array{Float64,1},w_path::Array{Float64,1},R_path::Array{Float64,1},τ_path::Array{Float64},div_path::Array{Float64,1},β::Float64,p::params) 
 
 Solves backwards from a period (e.g. steady state) in which decision rules are known
 and given price/dividend paths. Relies on function EGM.
@@ -210,7 +209,7 @@ end
 
 
 """
-   margU(c::Float64,par::params,order::Int64=1)
+    margU(c::Float64,par::params,order::Int64=1)
 
 Helper function, computes marginal utility of consumption or second derivative of utility function (if order = 2)
 """
@@ -226,8 +225,7 @@ end
 
 
 """
-    get_cnbp(xthis::Array{Float64},c::Array{Float64},R::Float64,
-            w::Float64,τ::Float64,p::params,inc_idx::Int)
+    get_cnbp(xthis::Array{Float64},c::Array{Float64},R::Float64,w::Float64,τ::Float64,p::params,inc_idx::Int)
 
 Helper function that, given the HH policy function and factor prices, taxes, etc.,
 interpolates the HH policy function to the values in xthis and computes
@@ -253,7 +251,7 @@ end
     EGM(β::Float64,...)
 
 Conducts one iteration on consumption and labor supply using the endogenous grid method (EGM).
-Inputs need to be 2x1 arrays of wage, interest etc in current and previous period
+Inputs need to be 2x1 arrays of wage, interest, etc. in current and previous period.
 """ 
 function EGM(c_next::Array{Float64,2},β::Float64, Rs::Array{Float64,1}, ws::Array{Float64,1},
                 τs::Array{Float64,1}, div::Array{Float64,1},p::params)
@@ -313,7 +311,7 @@ end
 """
     egm_solve_constrained()
 
- Backs out consumption level of constrained household.
+Backs out consumption level of constrained household.
 """
 function egm_solve_constrained(bs::Array{Float64,1},ip::Int,w::Float64,τ::Float64,div::Float64,R::Float64,p::params)
 
@@ -348,7 +346,7 @@ end
 
 
 """
-   forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64)
+    forwardmat(c_opt::Array{Float64,2},R::Float64,w::Float64,τ::Float64,div::Float64)
 
 Generates a transition matrix for the aggregate wealth distribution. Uses the helper function lineartrans() as 
 in the original code.
@@ -406,7 +404,7 @@ end
 
 
 """
-   lineartrans(bp::Array{Float64,1},par::params)
+    lineartrans(bp::Array{Float64,1},par::params)
 
 Calculates the new positions and transition probabilities on the asset grid for given savings choices.
 Used the to conduct a non-stochastic simulation a la Young (2010, JEDC).
@@ -438,7 +436,7 @@ end
 
 
 """
-   find_closest_lower(x::Float64,grid::Array{Float64,1})
+    find_closest_lower(x::Float64,grid::Array{Float64,1})
 
 Helper function for lineartrans. Finds the next lower asset point on the grid for savings choice x.
 """
@@ -449,7 +447,7 @@ end
 
 
 """
-   inv_dist(Π::SparseMatrixCSC)
+    inv_dist(Π::SparseMatrixCSC)
 
 Find invariant steady state wealth distribution by solving for the eigenvector corresponding to the 
 unit eigenvalue of the transition matrix.
@@ -464,7 +462,7 @@ end
 
 
 """
-   aggregate_C_L(D::Array{Float64,1},c_policies::Array{Float64,1},R::Float64,w::Float64,τ::Float64,div::Float64)
+    aggregate_C_L(D::Array{Float64,1}, c_policies::Array{Float64,1}, R::Float64, w::Float64, τ::Float64, div::Float64)
 
 Computes aggregate consumption and labor supply of the household sector. Equivalent to expect_C in the MNS code.
 """
@@ -496,7 +494,7 @@ end
 
 #below are some code residuals
 """
-   get_steady_state(p::params,β_guess::Float64,Y_guess::Float64)
+    get_steady_state(p::params,β_guess::Float64,Y_guess::Float64)
 
 Solve for β and steady state output so target bond level is reached at the target interest rate (both are specified in p)
 DOES NOT WORK YET!

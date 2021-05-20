@@ -199,9 +199,9 @@ function simulate_step(D::Array{Float64,1},c_pol::Array{Float64,2},R::Float64,w:
 end
 
 """
-    forward_dist
+    forward_dist(D::Array{Float64,1},Pi::SparseMatrixCSC)
 
-Calculates Asset distribution in next period given transition matrix Pi and current distribution D
+Calculates Asset distribution in next period given transition matrix Pi and current distribution D.
 """
 function forward_dist(D::Array{Float64,1},Pi::SparseMatrixCSC)
 return Pi'*D

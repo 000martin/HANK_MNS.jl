@@ -3,10 +3,10 @@
 using Parameters, Roots, QuantEcon, Statistics
 
 
-#File that provides structures used throughout the code as well as functions to fill them
+# File that provides structures used throughout the code as well as functions to fill them
 
 """
-A structure that stores the parameter vector of the model
+    A structure that stores the parameter vector of the model.
 """
 
  @with_kw mutable struct  params
@@ -31,8 +31,9 @@ A structure that stores the parameter vector of the model
     b_grid::Array{Float64,1}       #knot points for consumption polynomial
 end
 
+
 """ 
-A structure that saves the steady state of the model.
+    A structure that saves the steady state of the model.
 """
 mutable struct steady_state
  c_policies::Array{Float64}  #policy functions
@@ -49,7 +50,7 @@ end
 
 
 """
-A structure that stores the full model transition
+    A structure that stores the full model transition.
 """
 mutable struct transition_full
 S::Array{Float64,1}         #price dispersion
@@ -61,8 +62,9 @@ R::Array{Float64,1}         #interest rates
 div::Array{Float64,1}       #dividends
 end   
 
+
 """
-A structure that stores the complete markets transition
+    A structure that stores the complete markets transition.
 """
 struct transition_CompMkts
 S::Array{Float64,1}         #price dispersion
@@ -72,7 +74,6 @@ Y::Array{Float64,1}         #output
 R::Array{Float64,1}         #interest rates
 div::Array{Float64,1}       #dividends
 end
-
 
 
 """
@@ -115,6 +116,7 @@ end
 
 """
     makeknotd(kmin::Float64,kmax::Float64, n::Int, logshift::Float64)
+
 A Function involved in generating the household asset grid. Several methods available.
 """
 function makeknotd(kmin::Float64,kmax::Float64, n::Int, logshift::Float64)
@@ -133,6 +135,7 @@ end
 
 """
     set_parameters()
+
 Function to construct the parameter structure.
 """
 function set_parameters( ; β::Float64 = 0.986,    #discount factor
@@ -176,7 +179,7 @@ end
 """
     reshape_c(c::Array{Float64},p)
 
-helper function with two methods to replace par2wide and par2long from the MNS code
+Helper function with two methods to replace par2wide and par2long from the MNS code.
 """
 function reshape_c(c::Array{Float64,1},par::params)
  @unpack nb,nz = par
@@ -196,4 +199,3 @@ function reshape_c(c::Array{Float64,2},par::params)
  return c_long[:,1]
 
 end
-

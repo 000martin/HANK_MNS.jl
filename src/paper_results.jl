@@ -34,7 +34,7 @@ end
     get_figures_5_6(; Horizon::StepRange{Int64,Int64} = 1:2:41, T::Int64 = 200, RChange::Float64 = -0.005)
 
 Function to replicate Figures 5 and 6 from the MNS paper.
-WARNING: Running this take quite long, as a large number of transition paths are computed
+WARNING: Running this takes quite long, as a large number of transition paths are computed
 """
 function get_figures_5_6(; Horizon::StepRange{Int64,Int64} = 1:2:41, T::Int64 = 200, RChange::Float64 = -0.005)
 

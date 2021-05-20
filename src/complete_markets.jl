@@ -7,7 +7,6 @@ Solves for the complete markets transition path.
 Inputs: TR (time until single-quarter interest rate change), T (time horizon transition path), 
 (Change of R at time TR))
 """
-
 function get_transition_CompMkts(TR::Int, T::Int, p::params; RChange::Float64 = -0.005)
     
     # Update struct for representative agent case
@@ -43,13 +42,14 @@ function get_transition_CompMkts(TR::Int, T::Int, p::params; RChange::Float64 = 
     # Initial guesses
     w = 1/p.μ
     R = p.Rbar
+
     wagepath = fill(w,1,T)
     dividendpath = fill(stst[ind_dividend],1,T)
     Spath = ones(1,T)
     
     # Policy
     Rpath =  fill(R,1,T)
-    Rpath[TR+1] =  R + RChange
+    Rpath[TR+2] =  p.Rbar + RChange
     
     tp = solve_for_transition_CompMkts(Rpath, wagepath, dividendpath, Spath, stst, name, p::params)
 
@@ -73,9 +73,9 @@ function solve_for_transition_CompMkts(Rpath, wagepath, dividendpath, Spath, sts
 
     X = repeat(stst,1,T)
 
-    for outer_it in 1:100
+    for outer_it = 1:100
 
-        for inner_it in 1:100
+        for inner_it = 1:100
             
             for t = T-1:-1:2
                 # Solve backwards using Euler
@@ -85,11 +85,11 @@ function solve_for_transition_CompMkts(Rpath, wagepath, dividendpath, Spath, sts
             X[ind_Y,2:T-1] = X[ind_C,2:T-1]
             X[ind_N,2:T-1] = Spath[2:T-1].*X[ind_Y,2:T-1]
     
-            X[ind_L,2:T-1] = (wagepath[2:T-1] .* X[ind_C,2:T-1].^(-p.γ) / p.ψ).^(1/2)
+            X[ind_L,2:T-1] = (wagepath[2:T-1] .* X[ind_C,2:T-1].^(-p.γ) / p.ψ1).^(1/p.ψ)
                 
             # Adjust wage, dividend
             oldwage = wagepath
-            wagepath[2:T-1] = wagepath[2:T-1].*(X[ind_N,2:T-1]./X[ind_L,2:T-1]).^2
+            wagepath[2:T-1] = wagepath[2:T-1].*(X[ind_N,2:T-1]./X[ind_L,2:T-1]).^p.ψ
             dividendpath[2:T-1] = (X[ind_Y,2:T-1] - wagepath[2:T-1].*X[ind_N,2:T-1])
          
             test = findmax(abs.(wagepath./oldwage .- 1))[1]

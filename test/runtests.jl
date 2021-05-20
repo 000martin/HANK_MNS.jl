@@ -31,7 +31,7 @@ using Test, HANK_MNS
    @test size(Pi) == (p.nk*p.nz,p.nk*p.nz) 
 
    #invariant distribution induced by Pi should sum up to 1
-   @test sum(inv_dist(Pi)) ≈ 1.0
+   @test sum(HANK_MNS.inv_dist(Pi)) ≈ 1.0
 
 end;
 

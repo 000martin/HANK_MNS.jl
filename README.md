@@ -1,4 +1,4 @@
-HANK_MNS replication repository 
+HANK_MNS replication repository
 
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://000martin.github.io/HANK_MNS.jl)
 
@@ -9,20 +9,20 @@ This is a replication of ["The Power of Forward Guidance"](https://www.aeaweb.or
 
 Authors:  Matthias Haensel (@mhaense1), @000martin
 
-The project was part of our evaluation for the course [Numerical Methods](https://floswald.github.io/NumericalMethods/) at SciencesPo Paris in Spring 2021. 
+The project was part of our evaluation for the course [Numerical Methods](https://floswald.github.io/NumericalMethods/) at SciencesPo Paris in Spring 2021.
 
-The original paper studies the Forward Guidance, an unconventionary monetary tool, which, in standard 
+The original paper studies the Forward Guidance, an unconventionary monetary tool, which, in standard
 representative agent New Keynesian models, has strong effects on current economic outcomes.
 
 However, as MNS (and we using their model) find, Forward Guidance has considerably less power in models with
-heterogenous agents facing unisurable idiosyncratic income risk. 
+heterogenous agents facing unisurable idiosyncratic income risk.
 
 Conceptually, MNS compute perfect foresight transition paths of their simple Heterogenous Agents New Keynesian (HANK) model following a one-time announcement of an interest change far in the future (20 quarters in the paper).
 
 Our Julia code is able to replicate their main exercises and produce equivalents of Figures 3,4,5 and 6 as well as Table 2 in their paper.
 Unfortunalety, it does not (yet) extend to their Zero Lower Bound Analysis featuring time-varying subjective discount factors (Section II.C in the paper).
 
-## How does it work? 
+## How does it work?
 
 In case you want to simply reproduce these main results, you use our convenience functions, which allow you to obtain the results as simple as follows:
 
@@ -33,7 +33,7 @@ using HANK_MNS
 #Displays our replications of figures 3 and 4
 get_figures_3_4()
 
-#Saves a table containing our replication of table 2 
+#Saves a table containing our replication of table 2
 tb2 = get_table_2()
 
 #Displays our replications of figures 5 and 6
@@ -43,6 +43,11 @@ get_figures_5_6()
 ```
 
 These convenience functions can also take inputs, allowing to analyze different time horizons or rate changes. See the documentation below for details.
+
+Since, as said, running `get_figures_5_6()` takes quite long, we already provide
+its output here for convenience:
+
+![Replication figs 5 and 6](https://github.com/000martin/HANK_MNS.jl/blob/main/Figures_5_6.png)
 
 In case one wants to produce a transition path with a custom calibration using the incomplete contracts model, one would proceed as follows:
 
@@ -55,7 +60,7 @@ p = set_parameters(B = 7.8, σ = 0.03^0.5)
 #Find the \beta consistent with the target interest rate and asset level in steady state
 #and obtain a corresponding steady state structure SS.
 #Depending on your calibration, you might have to choose a different betaRange,
-#e.g [0.97,0.995] instead of [0.95,0.99]. See function documentation for details. 
+#e.g [0.97,0.995] instead of [0.95,0.99]. See function documentation for details.
 b, y, SS = get_steady_state(p,0.9,[0.95,0.99])
 
 #set the correct \beta value

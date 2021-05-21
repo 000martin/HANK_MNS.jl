@@ -36,11 +36,11 @@ tpc = get_transition_CompMkts(TR,T,p; RChange=RChange)
 
 p1 = plot(0:2*TR-1,(tp.Y[1:2*TR]./SS.Y .- 1.0)*100.0, title="Figure 3: Output response",xlabel = "Quarter", ylabel = "Output",
         label = "Incomplete Markets")  
-plot!(0:2*TR-1,tpc.Y[1:2*TR]*100.0,label = ["Complete Markets"] )
+plot!(0:2*TR-1,tpc.Y[1:2*TR]*100.0,label = "Complete Markets" )
 
 p2 = plot(0:2*TR-1,(tp.pΠ[1:2*TR] .- 1.0)*100.0,title = "Figure 4: Inflation Response",xlabel = "Quarter", ylabel = "Inflation",
         label = "Incomplete Markets")
-plot!(0:2*TR-1,tpc.pΠ[1:2*TR]*100.0,label = ["Complete Markets"] )
+plot!(0:2*TR-1,tpc.pΠ[1:2*TR]*100.0,label = "Complete Markets" )
 
 return plot(p1,p2, layout = (2,1))
 end
@@ -105,9 +105,15 @@ function get_figures_5_6(; Horizon::StepRange{Int64,Int64} = 1:2:41, T::Int64 = 
     plot!(Horizon, Y_response_CM*100.0, label = "Complete Markets")
     
     p2 = plot(Horizon,(Π_response .- 1.0)*100.0,title = "Figure 6: Initial Inflation response",xlabel = "Horizon rate change", ylabel = "Inflation",
-                label = "Complete Markets")
-    plot!(Horizon, Π_response_CM*100.0, label = "Complete Markets")
+                label = "Incomplete Markets")
 
+    #for baseline case, make it look like figure 6 in paper
+    if TRs[end] == 41
+    plot!(1:2:19, Π_response_CM[1:10]*100.0, label = "Complete Markets")
+    else #plot complete path 
+    plot!(Horizon, Π_response_CM*100.0, label = "Complete Markets")
+    end
+    
     return plot(p1,p2, layout = (2,1))
 end
 
